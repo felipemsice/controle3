@@ -1,1 +1,190 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel ADM — Despesas</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+<style>
+:root{--green:#1D9E75;--green-dark:#0F6E56;--green-light:#E1F5EE;--red:#D85A30;--red-light:#FAECE7;--text:#1a1a1a;--text-2:#555;--text-3:#999;--bg:#f5f5f3;--surface:#fff;--border:rgba(0,0,0,0.08);--radius:12px}
+@media(prefers-color-scheme:dark){:root{--text:#f0f0ee;--text-2:#aaa;--text-3:#666;--bg:#141414;--surface:#1e1e1e;--border:rgba(255,255,255,0.08)}}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.login-card{width:100%;max-width:360px;background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);padding:32px 28px}
+.login-logo{text-align:center;margin-bottom:28px}
+.login-logo i{font-size:36px;color:var(--green)}
+.login-logo h1{font-size:20px;font-weight:600;margin-top:8px}
+.login-logo p{font-size:13px;color:var(--text-3);margin-top:4px}
+.field{margin-bottom:14px}
+.field label{font-size:13px;color:var(--text-2);display:block;margin-bottom:6px;font-weight:500}
+.field input{width:100%;height:48px;border:1px solid var(--border);border-radius:8px;padding:0 14px;font-size:15px;background:var(--bg);color:var(--text);font-family:inherit}
+.field input:focus{outline:2px solid var(--green);outline-offset:-1px}
+.btn{width:100%;height:50px;border-radius:8px;border:none;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;background:var(--green);color:#fff}
+.btn:active{opacity:.85}
+.err{background:var(--red-light);color:var(--red);font-size:13px;padding:10px 14px;border-radius:8px;margin-bottom:14px;display:none}
+.err.show{display:block}
+.adm-wrap{display:none;max-width:900px;margin:0 auto;padding:24px 16px}
+.adm-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
+.adm-header h1{font-size:22px;font-weight:600}
+.adm-header-right{display:flex;align-items:center;gap:12px}
+.badge{background:var(--green-light);color:var(--green-dark);font-size:12px;font-weight:600;padding:4px 10px;border-radius:999px}
+.logout-btn{background:none;border:1px solid var(--border);color:var(--text-2);font-size:13px;padding:8px 14px;border-radius:8px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px}
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px}
+.stat-card .label{font-size:12px;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+.stat-card .value{font-size:28px;font-weight:700;color:var(--text)}
+.stat-card .value.green{color:var(--green)}
+.users-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.users-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)}
+.users-head h2{font-size:16px;font-weight:600}
+.refresh-btn{background:none;border:1px solid var(--border);color:var(--text-2);font-size:13px;padding:6px 12px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:6px}
+.user-row{display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid var(--border)}
+.user-row:last-child{border-bottom:none}
+.user-avatar{width:40px;height:40px;border-radius:50%;background:var(--green-light);color:var(--green-dark);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;flex-shrink:0}
+.user-info{flex:1;min-width:0}
+.user-name{font-size:15px;font-weight:600;color:var(--text)}
+.user-email{font-size:12px;color:var(--text-3);margin-top:2px}
+.user-meta{font-size:11px;color:var(--text-3);margin-top:3px;display:flex;gap:10px}
+.user-actions{display:flex;gap:8px;flex-shrink:0}
+.pill{font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px}
+.pill-green{background:var(--green-light);color:var(--green-dark)}
+.pill-gray{background:var(--bg);color:var(--text-3);border:1px solid var(--border)}
+.pill-red{background:var(--red-light);color:var(--red)}
+.icon-btn{width:34px;height:34px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text-2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px}
+.icon-btn:hover{border-color:var(--red);color:var(--red);background:var(--red-light)}
+.icon-btn.toggle:hover{border-color:var(--green);color:var(--green);background:var(--green-light)}
+.empty{text-align:center;padding:3rem;color:var(--text-3);font-size:14px}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:#1a1a1a;color:#fff;font-size:14px;font-weight:500;padding:12px 22px;border-radius:999px;transition:transform .3s cubic-bezier(.34,1.56,.64,1),opacity .3s;opacity:0;z-index:999;pointer-events:none}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+.toast.error{background:var(--red)}
+</style>
+</head>
+<body>
 
+<!-- LOGIN ADM -->
+<div id="login-wrap" class="login-wrap">
+  <div class="login-card">
+    <div class="login-logo">
+      <i class="ti ti-shield-lock"></i>
+      <h1>Painel ADM</h1>
+      <p>Acesso restrito ao administrador</p>
+    </div>
+    <div class="err" id="login-err"></div>
+    <div class="field"><label>E-mail</label><input type="email" id="adm-email" placeholder="admin@email.com" autocomplete="email"></div>
+    <div class="field"><label>Senha</label><input type="password" id="adm-pw" placeholder="••••••" autocomplete="current-password"></div>
+    <button class="btn" onclick="doAdmLogin()">Entrar</button>
+  </div>
+</div>
+
+<!-- PAINEL ADM -->
+<div id="adm-wrap" class="adm-wrap">
+  <div class="adm-header">
+    <h1>Painel de administração</h1>
+    <div class="adm-header-right">
+      <span class="badge"><i class="ti ti-shield-check" style="font-size:12px;vertical-align:-1px"></i> ADM</span>
+      <button class="logout-btn" onclick="doAdmLogout()"><i class="ti ti-logout" style="font-size:14px"></i> Sair</button>
+    </div>
+  </div>
+  <div class="stats-row">
+    <div class="stat-card"><div class="label">Total de usuários</div><div class="value green" id="stat-total">—</div></div>
+    <div class="stat-card"><div class="label">Verificados</div><div class="value" id="stat-verified">—</div></div>
+    <div class="stat-card"><div class="label">Ativos</div><div class="value" id="stat-active">—</div></div>
+  </div>
+  <div class="users-card">
+    <div class="users-head">
+      <h2>Usuários cadastrados</h2>
+      <button class="refresh-btn" onclick="loadUsers()"><i class="ti ti-refresh" style="font-size:14px"></i> Atualizar</button>
+    </div>
+    <div id="users-list"><div class="empty">Carregando...</div></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let admToken=sessionStorage.getItem('adm-token');
+let toastTimer;
+function showToast(msg,isError=false){const t=document.getElementById('toast');t.textContent=msg;t.className='toast show'+(isError?' error':'');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.className='toast',2800)}
+function showErr(msg){const e=document.getElementById('login-err');e.textContent=msg;e.classList.add('show')}
+
+async function api(path,opts={}){
+  const headers={'Content-Type':'application/json',...(admToken?{Authorization:'Bearer '+admToken}:{})};
+  const r=await fetch(path,{...opts,headers});
+  return r.json();
+}
+
+async function doAdmLogin(){
+  const email=document.getElementById('adm-email').value.trim();
+  const pw=document.getElementById('adm-pw').value;
+  try{
+    const d=await api('/api/adm/login',{method:'POST',body:JSON.stringify({email,password:pw})});
+    if(d.error){showErr(d.error);return}
+    admToken=d.token;sessionStorage.setItem('adm-token',admToken);
+    document.getElementById('login-wrap').style.display='none';
+    document.getElementById('adm-wrap').style.display='block';
+    loadUsers();
+  }catch(e){showErr('Erro de conexão')}
+}
+
+function doAdmLogout(){admToken=null;sessionStorage.removeItem('adm-token');location.reload()}
+
+async function loadUsers(){
+  document.getElementById('users-list').innerHTML='<div class="empty">Carregando...</div>';
+  try{
+    const users=await api('/api/adm/users');
+    document.getElementById('stat-total').textContent=users.length;
+    document.getElementById('stat-verified').textContent=users.filter(u=>u.verified).length;
+    document.getElementById('stat-active').textContent=users.filter(u=>u.active).length;
+    if(!users.length){document.getElementById('users-list').innerHTML='<div class="empty">Nenhum usuário cadastrado</div>';return}
+    document.getElementById('users-list').innerHTML=users.map(u=>{
+      const initial=(u.name||'?')[0].toUpperCase();
+      const verBadge=u.verified?'<span class="pill pill-green">Verificado</span>':'<span class="pill pill-gray">Pendente</span>';
+      const actBadge=u.active?'<span class="pill pill-green">Ativo</span>':'<span class="pill pill-red">Inativo</span>';
+      const created=u.created?new Date(u.created).toLocaleDateString('pt-BR'):'—';
+      return`<div class="user-row">
+        <div class="user-avatar">${initial}</div>
+        <div class="user-info">
+          <div class="user-name">${u.name}</div>
+          <div class="user-email">${u.email}</div>
+          <div class="user-meta">
+            <span><i class="ti ti-calendar" style="font-size:11px;vertical-align:-1px"></i> ${created}</span>
+            <span><i class="ti ti-receipt" style="font-size:11px;vertical-align:-1px"></i> ${u.despesas_count} lançamentos</span>
+            ${verBadge} ${actBadge}
+          </div>
+        </div>
+        <div class="user-actions">
+          <button class="icon-btn toggle" title="${u.active?'Desativar':'Ativar'} usuário" onclick="toggleUser(${u.id},'${u.name}',${u.active})">
+            <i class="ti ${u.active?'ti-user-off':'ti-user-check'}"></i>
+          </button>
+          <button class="icon-btn" title="Remover usuário" onclick="deleteUser(${u.id},'${u.name}')">
+            <i class="ti ti-trash"></i>
+          </button>
+        </div>
+      </div>`;
+    }).join('');
+  }catch(e){document.getElementById('users-list').innerHTML='<div class="empty">Erro ao carregar usuários</div>'}
+}
+
+async function toggleUser(id,name,active){
+  if(!confirm(`${active?'Desativar':'Ativar'} o usuário ${name}?`))return;
+  try{
+    const d=await api(`/api/adm/users/${id}/toggle`,{method:'POST'});
+    if(d.ok){showToast(`Usuário ${d.active?'ativado':'desativado'}`);loadUsers()}
+  }catch(e){showToast('Erro',true)}
+}
+
+async function deleteUser(id,name){
+  if(!confirm(`Remover permanentemente o usuário ${name} e todos os seus lançamentos?`))return;
+  try{
+    const d=await api(`/api/adm/users/${id}`,{method:'DELETE'});
+    if(d.ok){showToast('Usuário removido');loadUsers()}
+  }catch(e){showToast('Erro',true)}
+}
+
+if(admToken){document.getElementById('login-wrap').style.display='none';document.getElementById('adm-wrap').style.display='block';loadUsers()}
+document.getElementById('adm-email').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('adm-pw').focus()});
+document.getElementById('adm-pw').addEventListener('keydown',e=>{if(e.key==='Enter')doAdmLogin()});
+</script>
+</body>
+</html>
