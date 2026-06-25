@@ -71,7 +71,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <p>Acesso restrito ao administrador</p>
     </div>
     <div class="err" id="login-err"></div>
-    <div class="field"><label>E-mail</label><input type="email" id="adm-email" placeholder="admin@email.com" autocomplete="email"></div>
+    <div class="field"><label>Telefone</label><input type="tel" id="adm-email" placeholder="admin@email.com" autocomplete="email"></div>
     <div class="field"><label>Senha</label><input type="password" id="adm-pw" placeholder="••••••" autocomplete="current-password"></div>
     <button class="btn" onclick="doAdmLogin()">Entrar</button>
   </div>
@@ -146,7 +146,7 @@ async function loadUsers(){
         <div class="user-avatar">${initial}</div>
         <div class="user-info">
           <div class="user-name">${u.name}</div>
-          <div class="user-email">${u.email}</div>
+          <div class="user-email">${u.phone}</div>
           <div class="user-meta">
             <span><i class="ti ti-calendar" style="font-size:11px;vertical-align:-1px"></i> ${created}</span>
             <span><i class="ti ti-receipt" style="font-size:11px;vertical-align:-1px"></i> ${u.despesas_count} lançamentos</span>
