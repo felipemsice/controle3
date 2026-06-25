@@ -1,10 +1,10 @@
-import os, json, sqlite3, secrets, hashlib, base64
+import os, json, sqlite3, secrets, hashlib, base64, smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timedelta
 from functools import wraps
 from flask import Flask, request, jsonify, send_from_directory, g
 import jwt
-import sendgrid
-from sendgrid.helpers.mail import Mail
 
 app = Flask(__name__, static_folder='static')
 
@@ -15,8 +15,9 @@ PHOTOS_DIR = os.path.join(BASE_DIR, 'photos')
 os.makedirs(PHOTOS_DIR, exist_ok=True)
 
 SECRET_KEY      = os.environ.get('SECRET_KEY', 'dev-secret-mude-em-producao')
-SENDGRID_KEY    = os.environ.get('SENDGRID_KEY', '')
-FROM_EMAIL      = os.environ.get('FROM_EMAIL', 'felipe.silva.841189@gmail.com')
+GMAIL_USER      = os.environ.get('GMAIL_USER', 'felipe.silva.841189@gmail.com')
+GMAIL_APP_PW    = os.environ.get('GMAIL_APP_PW', '')
+FROM_EMAIL      = GMAIL_USER
 ADM_EMAIL       = os.environ.get('ADM_EMAIL',  'felipe.silva.841189@gmail.com')
 ADM_PASSWORD    = os.environ.get('ADM_PASSWORD', 'Admin@2025!')
 
@@ -71,14 +72,16 @@ def hash_password(pw):
     return hashlib.sha256(pw.encode()).hexdigest()
 
 def send_email(to, subject, body):
-    if not SENDGRID_KEY:
-        print(f"EMAIL para {to}: {subject}\n{body}")
-        return
     try:
-        sg = sendgrid.SendGridAPIClient(api_key=SENDGRID_KEY)
-        msg = Mail(from_email=FROM_EMAIL, to_emails=to,
-                   subject=subject, html_content=body)
-        sg.client.mail.send.post(request_body=msg.get())
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = subject
+        msg['From']    = GMAIL_USER
+        msg['To']      = to
+        msg.attach(MIMEText(body, 'html', 'utf-8'))
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+            server.login(GMAIL_USER, GMAIL_APP_PW)
+            server.sendmail(GMAIL_USER, to, msg.as_string())
+        print(f"Email enviado para {to}")
     except Exception as e:
         print(f"Erro ao enviar email: {e}")
 
