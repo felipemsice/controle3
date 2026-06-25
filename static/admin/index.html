@@ -115,10 +115,10 @@ async function api(path,opts={}){
 }
 
 async function doAdmLogin(){
-  const email=document.getElementById('adm-email').value.trim();
+  const phone=document.getElementById('adm-email').value.trim();
   const pw=document.getElementById('adm-pw').value;
   try{
-    const d=await api('/api/adm/login',{method:'POST',body:JSON.stringify({email,password:pw})});
+    const d=await api('/api/adm/login',{method:'POST',body:JSON.stringify({phone,password:pw})});
     if(d.error){showErr(d.error);return}
     admToken=d.token;sessionStorage.setItem('adm-token',admToken);
     document.getElementById('login-wrap').style.display='none';
