@@ -1,1 +1,496 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0F6E56">
+<title>Despesas Pessoais</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+<style>
+:root{--green:#1D9E75;--green-dark:#0F6E56;--green-light:#E1F5EE;--green-mid:#9FE1CB;--red:#D85A30;--red-light:#FAECE7;--text:#1a1a1a;--text-2:#555;--text-3:#999;--bg:#f5f5f3;--surface:#fff;--border:rgba(0,0,0,0.08);--radius:16px;--radius-sm:10px}
+@media(prefers-color-scheme:dark){:root{--text:#f0f0ee;--text-2:#aaa;--text-3:#666;--bg:#141414;--surface:#1e1e1e;--border:rgba(255,255,255,0.08)}}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',sans-serif;color:var(--text);min-height:100vh}
 
+/* AUTH SCREENS */
+.auth-wrap{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}
+.auth-card{width:100%;max-width:380px;background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);padding:28px 24px}
+.auth-logo{text-align:center;margin-bottom:24px}
+.auth-logo i{font-size:40px;color:var(--green)}
+.auth-logo h1{font-size:20px;font-weight:600;color:var(--text);margin-top:8px}
+.auth-logo p{font-size:13px;color:var(--text-3);margin-top:4px}
+.field{margin-bottom:14px}
+.field label{font-size:13px;color:var(--text-2);display:block;margin-bottom:6px;font-weight:500}
+.field input{width:100%;height:48px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 14px;font-size:15px;background:var(--bg);color:var(--text);font-family:inherit;-webkit-appearance:none}
+.field input:focus{outline:2px solid var(--green);outline-offset:-1px}
+.btn{width:100%;height:50px;border-radius:var(--radius-sm);border:none;font-size:16px;font-weight:600;cursor:pointer;font-family:inherit;transition:opacity .15s}
+.btn-primary{background:var(--green);color:#fff}
+.btn-primary:active{opacity:.85}
+.btn-ghost{background:none;color:var(--green);font-size:14px;height:40px;margin-top:6px}
+.btn-ghost:active{opacity:.7}
+.auth-divider{text-align:center;font-size:13px;color:var(--text-3);margin:14px 0}
+.auth-error{background:var(--red-light);color:var(--red);font-size:13px;padding:10px 14px;border-radius:var(--radius-sm);margin-bottom:14px;display:none}
+.auth-error.show{display:block}
+.auth-success{background:var(--green-light);color:var(--green-dark);font-size:13px;padding:10px 14px;border-radius:var(--radius-sm);margin-bottom:14px;display:none}
+.auth-success.show{display:block}
+.code-input{letter-spacing:10px;font-size:24px;font-weight:700;text-align:center}
+.screen{display:none}.screen.active{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:24px}
+
+/* APP */
+.app-wrap{display:none;max-width:480px;margin:0 auto;padding:0 0 3rem}
+.hero{background:var(--green-dark);border-radius:0 0 32px 32px;padding:env(safe-area-inset-top,16px) 20px 28px;margin-bottom:-16px}
+.hero-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding-top:8px}
+.hero-top h1{font-size:17px;font-weight:600;color:var(--green-light)}
+.hero-badge{background:rgba(255,255,255,.12);color:var(--green-mid);font-size:12px;padding:4px 10px;border-radius:999px}
+.hero-user{font-size:12px;color:var(--green-mid);margin-bottom:4px}
+.hero-total-label{font-size:13px;color:var(--green-mid);margin-bottom:4px}
+.hero-total{font-size:40px;font-weight:700;color:#fff;letter-spacing:-.03em;line-height:1}
+.hero-sub{font-size:13px;color:var(--green-mid);margin-top:6px}
+.logout-btn{background:rgba(255,255,255,.12);border:none;color:var(--green-mid);font-size:12px;padding:6px 10px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:4px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:24px 16px 0;position:relative;z-index:1}
+.stat{background:var(--surface);border-radius:var(--radius-sm);padding:14px 16px;border:1px solid var(--border)}
+.stat-label{font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+.stat-value{font-size:26px;font-weight:700;color:var(--text);letter-spacing:-.02em}
+.section{padding:20px 16px 0}
+.section-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.section-title{font-size:15px;font-weight:600;color:var(--text)}
+.section-action{font-size:13px;color:var(--green);background:none;border:none;cursor:pointer;font-family:inherit;padding:4px 0}
+.mic-card{background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);padding:24px 20px;text-align:center}
+.mic-btn{width:88px;height:88px;border-radius:50%;border:none;background:var(--green);color:#fff;font-size:36px;cursor:pointer;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;transition:transform .12s,background .15s}
+.mic-btn:active{transform:scale(.92)}
+.mic-btn.listening{background:var(--red);animation:pulse 1.4s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(216,90,48,.4)}60%{box-shadow:0 0 0 16px rgba(216,90,48,0)}}
+.mic-transcript{font-size:16px;font-weight:600;color:var(--text);min-height:24px;margin-bottom:6px}
+.mic-hint{font-size:13px;color:var(--text-3);line-height:1.5}
+.manual-card{background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);padding:14px}
+.field-row{display:flex;gap:8px}
+.field-row select,.field-row input{flex:1;min-width:0;height:48px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 12px;font-size:15px;background:var(--bg);color:var(--text);font-family:inherit;-webkit-appearance:none;appearance:none}
+.add-btn{height:48px;padding:0 18px;border-radius:var(--radius-sm);border:none;background:var(--green);color:#fff;cursor:pointer;font-size:22px;display:flex;align-items:center;flex-shrink:0}
+.add-btn:active{background:var(--green-dark);transform:scale(.96)}
+.entries-card{background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);overflow:hidden}
+.entry{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--border)}
+.entry:last-child{border-bottom:none}
+.entry-icon{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.entry-body{flex:1;min-width:0}
+.entry-cat{font-size:15px;font-weight:600;color:var(--text)}
+.entry-dt{font-size:11px;color:var(--text-3);margin-top:2px;display:flex;gap:8px}
+.entry-actions{display:flex;align-items:center;gap:4px;flex-shrink:0}
+.entry-amount{font-size:15px;font-weight:700;color:var(--text);white-space:nowrap}
+.photo-btn{width:36px;height:36px;border-radius:10px;border:1px solid var(--border);background:var(--bg);color:var(--text-3);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;position:relative;overflow:hidden}
+.photo-btn.has-photo{border-color:var(--green);background:var(--green-light);color:var(--green-dark)}
+.photo-btn img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:9px}
+.del-btn{width:36px;height:36px;border-radius:10px;background:none;border:none;cursor:pointer;color:var(--text-3);font-size:17px;display:flex;align-items:center;justify-content:center}
+.del-btn:active{color:var(--red);background:var(--red-light)}
+.chart-card{background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);padding:16px}
+.bar-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.bar-row:last-child{margin-bottom:0}
+.bar-label{font-size:12px;color:var(--text-2);width:88px;flex-shrink:0;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar-track{flex:1;height:24px;background:var(--bg);border-radius:6px;overflow:hidden}
+.bar-fill{height:100%;border-radius:6px;transition:width .5s cubic-bezier(.4,0,.2,1)}
+.bar-val{font-size:12px;color:var(--text-2);width:76px;text-align:right;flex-shrink:0;white-space:nowrap}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;align-items:flex-end;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border-radius:24px 24px 0 0;padding:20px 20px calc(20px + env(safe-area-inset-bottom));width:100%;max-width:480px}
+.modal-title{font-size:16px;font-weight:600;color:var(--text);margin-bottom:16px;text-align:center}
+.modal-preview{width:100%;height:200px;border-radius:var(--radius);background:var(--bg);border:1px solid var(--border);overflow:hidden;margin-bottom:14px;display:flex;align-items:center;justify-content:center}
+.modal-preview img{width:100%;height:100%;object-fit:contain}
+.modal-preview .placeholder{color:var(--text-3);font-size:14px;text-align:center}
+.modal-preview .placeholder i{font-size:36px;display:block;margin-bottom:8px;opacity:.4}
+.modal-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.modal-btn{height:52px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:15px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-family:inherit}
+.modal-btn.primary{background:var(--green);color:#fff;border-color:var(--green)}
+.modal-btn.danger{background:var(--red-light);color:var(--red);border-color:var(--red)}
+.modal-cancel{width:100%;height:48px;border-radius:var(--radius-sm);border:none;background:none;color:var(--text-3);font-size:15px;cursor:pointer;font-family:inherit}
+.viewer{display:none;position:fixed;inset:0;background:#000;z-index:200;align-items:center;justify-content:center}
+.viewer.open{display:flex}
+.viewer img{max-width:100%;max-height:100%;object-fit:contain}
+.viewer-close{position:absolute;top:20px;right:20px;width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.15);border:none;color:#fff;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.toast{position:fixed;bottom:32px;left:50%;transform:translateX(-50%) translateY(80px);background:#1a1a1a;color:#fff;font-size:14px;font-weight:500;padding:12px 22px;border-radius:999px;white-space:nowrap;transition:transform .3s cubic-bezier(.34,1.56,.64,1),opacity .3s;opacity:0;z-index:999;pointer-events:none}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+.toast.error{background:var(--red)}
+.empty{text-align:center;padding:2.5rem 1rem;color:var(--text-3);font-size:14px}
+.empty i{font-size:32px;display:block;margin-bottom:8px;opacity:.35}
+.spin{animation:spin .8s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<!-- ── LOGIN ── -->
+<div class="screen active" id="screen-login">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <i class="ti ti-wallet"></i>
+      <h1>Despesas Pessoais</h1>
+      <p>Faça login para continuar</p>
+    </div>
+    <div class="auth-error" id="login-error"></div>
+    <div class="field"><label>E-mail</label><input type="email" id="login-email" placeholder="seu@email.com" inputmode="email" autocomplete="email"></div>
+    <div class="field"><label>Senha</label><input type="password" id="login-pw" placeholder="••••••" autocomplete="current-password"></div>
+    <button class="btn btn-primary" onclick="doLogin()">Entrar</button>
+    <div class="auth-divider">ou</div>
+    <button class="btn btn-ghost" onclick="show('screen-register')">Criar conta</button>
+    <button class="btn btn-ghost" onclick="show('screen-forgot')">Esqueci minha senha</button>
+  </div>
+</div>
+
+<!-- ── CADASTRO ── -->
+<div class="screen" id="screen-register">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <i class="ti ti-user-plus"></i>
+      <h1>Criar conta</h1>
+      <p>Preencha seus dados</p>
+    </div>
+    <div class="auth-error" id="reg-error"></div>
+    <div class="auth-success" id="reg-success"></div>
+    <div class="field"><label>Nome</label><input type="text" id="reg-name" placeholder="Seu nome" autocomplete="name"></div>
+    <div class="field"><label>E-mail</label><input type="email" id="reg-email" placeholder="seu@email.com" inputmode="email" autocomplete="email"></div>
+    <div class="field"><label>Senha</label><input type="password" id="reg-pw" placeholder="Mínimo 6 caracteres" autocomplete="new-password"></div>
+    <button class="btn btn-primary" onclick="doRegister()">Criar conta</button>
+    <div class="auth-divider"></div>
+    <button class="btn btn-ghost" onclick="show('screen-login')">← Voltar ao login</button>
+  </div>
+</div>
+
+<!-- ── VERIFICAR E-MAIL ── -->
+<div class="screen" id="screen-verify">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <i class="ti ti-mail-check"></i>
+      <h1>Confirme seu e-mail</h1>
+      <p id="verify-hint">Digite o código enviado para seu e-mail</p>
+    </div>
+    <div class="auth-error" id="verify-error"></div>
+    <div class="field"><input class="code-input" type="text" id="verify-code" placeholder="ABC123" maxlength="6" autocomplete="one-time-code"></div>
+    <button class="btn btn-primary" onclick="doVerify()">Confirmar</button>
+    <div class="auth-divider"></div>
+    <button class="btn btn-ghost" onclick="show('screen-login')">← Voltar ao login</button>
+  </div>
+</div>
+
+<!-- ── RECUPERAR SENHA ── -->
+<div class="screen" id="screen-forgot">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <i class="ti ti-lock-open"></i>
+      <h1>Recuperar senha</h1>
+      <p>Enviaremos um código para seu e-mail</p>
+    </div>
+    <div class="auth-error" id="forgot-error"></div>
+    <div class="auth-success" id="forgot-success"></div>
+    <div class="field"><label>E-mail</label><input type="email" id="forgot-email" placeholder="seu@email.com" inputmode="email"></div>
+    <button class="btn btn-primary" onclick="doForgot()">Enviar código</button>
+    <div class="auth-divider"></div>
+    <button class="btn btn-ghost" onclick="show('screen-reset')">Já tenho o código</button>
+    <button class="btn btn-ghost" onclick="show('screen-login')">← Voltar ao login</button>
+  </div>
+</div>
+
+<!-- ── RESETAR SENHA ── -->
+<div class="screen" id="screen-reset">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <i class="ti ti-key"></i>
+      <h1>Nova senha</h1>
+      <p>Digite o código recebido e sua nova senha</p>
+    </div>
+    <div class="auth-error" id="reset-error"></div>
+    <div class="field"><label>E-mail</label><input type="email" id="reset-email" placeholder="seu@email.com" inputmode="email"></div>
+    <div class="field"><label>Código</label><input class="code-input" type="text" id="reset-code" placeholder="ABC123" maxlength="6"></div>
+    <div class="field"><label>Nova senha</label><input type="password" id="reset-pw" placeholder="Mínimo 6 caracteres"></div>
+    <button class="btn btn-primary" onclick="doReset()">Redefinir senha</button>
+    <div class="auth-divider"></div>
+    <button class="btn btn-ghost" onclick="show('screen-login')">← Voltar ao login</button>
+  </div>
+</div>
+
+<!-- ── APP PRINCIPAL ── -->
+<div class="app-wrap" id="app">
+  <div class="hero">
+    <div class="hero-top">
+      <div>
+        <div class="hero-user" id="hero-user"></div>
+        <h1>Despesas pessoais</h1>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="hero-badge" id="month-label"></span>
+        <button class="logout-btn" onclick="doLogout()"><i class="ti ti-logout" style="font-size:14px"></i></button>
+      </div>
+    </div>
+    <div class="hero-total-label">Total do mês</div>
+    <div class="hero-total" id="total-val">R$ 0,00</div>
+    <div class="hero-sub" id="hero-sub">Carregando...</div>
+  </div>
+  <div class="stats">
+    <div class="stat"><div class="stat-label">Lançamentos</div><div class="stat-value" id="count-val">—</div></div>
+    <div class="stat"><div class="stat-label">Categorias</div><div class="stat-value" id="cats-val">—</div></div>
+  </div>
+  <div class="section">
+    <div class="section-head"><span class="section-title">Entrada por voz</span></div>
+    <div class="mic-card">
+      <button class="mic-btn" id="mic-btn" aria-label="Gravar voz"><i class="ti ti-microphone"></i></button>
+      <div class="mic-transcript" id="transcript">Toque no microfone e fale</div>
+      <div class="mic-hint" id="mic-status">Ex: "Combustível 300" · "Lazer 80"</div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-head"><span class="section-title">Adicionar manualmente</span></div>
+    <div class="manual-card">
+      <div class="field-row">
+        <select id="manual-cat" aria-label="Categoria">
+          <option value="">Categoria</option>
+          <option>Combustível</option><option>Alimentação</option><option>Lazer</option>
+          <option>Saúde</option><option>Transporte</option><option>Moradia</option>
+          <option>Educação</option><option>Vestuário</option><option>Outros</option>
+        </select>
+        <input type="number" id="manual-val" placeholder="R$ valor" min="0" step="0.01" inputmode="decimal">
+        <button class="add-btn" onclick="addManual()"><i class="ti ti-plus"></i></button>
+      </div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-head">
+      <span class="section-title">Lançamentos</span>
+      <button class="section-action" onclick="clearAll()">Limpar tudo</button>
+    </div>
+    <div id="list-container"><div class="entries-card"><div class="empty"><i class="ti ti-receipt-off"></i>Nenhum lançamento ainda</div></div></div>
+  </div>
+  <div class="section">
+    <div class="section-head"><span class="section-title">Por categoria</span></div>
+    <div class="chart-card" id="chart-container"><div class="empty">Nenhum dado ainda</div></div>
+  </div>
+</div>
+
+<!-- PHOTO MODAL -->
+<div class="modal-overlay" id="photo-modal">
+  <div class="modal">
+    <div class="modal-title">Foto do comprovante</div>
+    <div class="modal-preview" id="modal-preview"><div class="placeholder"><i class="ti ti-photo"></i>Nenhuma foto ainda</div></div>
+    <div class="modal-btns">
+      <button class="modal-btn" onclick="triggerCamera()"><i class="ti ti-camera" style="font-size:20px"></i> Câmera</button>
+      <button class="modal-btn" onclick="triggerGallery()"><i class="ti ti-photo" style="font-size:20px"></i> Galeria</button>
+    </div>
+    <button class="modal-btn primary" id="modal-save-btn" onclick="savePhoto()" style="width:100%;margin-bottom:8px"><i class="ti ti-check" style="font-size:18px"></i> Salvar foto</button>
+    <button class="modal-btn danger" id="modal-remove-btn" onclick="removePhoto()" style="width:100%;margin-bottom:8px;display:none"><i class="ti ti-trash" style="font-size:18px"></i> Remover foto</button>
+    <button class="modal-cancel" onclick="closeModal()">Cancelar</button>
+  </div>
+</div>
+<div class="viewer" id="photo-viewer"><img id="viewer-img" src="" alt=""><button class="viewer-close" onclick="closeViewer()"><i class="ti ti-x"></i></button></div>
+<input type="file" id="input-camera" accept="image/*" capture="environment" style="display:none" onchange="handleFile(this)">
+<input type="file" id="input-gallery" accept="image/*" style="display:none" onchange="handleFile(this)">
+<div class="toast" id="toast"></div>
+
+<script>
+const CAT_META={'Combustível':{bg:'#E1F5EE',color:'#085041',icon:'ti-gas-station'},'Alimentação':{bg:'#E6F1FB',color:'#042C53',icon:'ti-tools-kitchen-2'},'Lazer':{bg:'#FAEEDA',color:'#412402',icon:'ti-device-gamepad-2'},'Saúde':{bg:'#FAECE7',color:'#4A1B0C',icon:'ti-heart-rate-monitor'},'Transporte':{bg:'#EEEDFE',color:'#26215C',icon:'ti-bus'},'Moradia':{bg:'#EAF3DE',color:'#173404',icon:'ti-home-2'},'Educação':{bg:'#FBEAF0',color:'#4B1528',icon:'ti-book'},'Vestuário':{bg:'#F1EFE8',color:'#2C2C2A',icon:'ti-hanger'},'Outros':{bg:'#F1EFE8',color:'#444441',icon:'ti-dots'}};
+const BAR_COLORS=['#1D9E75','#378ADD','#BA7517','#D85A30','#534AB7','#639922','#993556','#5F5E5A'];
+let entries=[],authToken=localStorage.getItem('token'),userName=localStorage.getItem('uname'),pendingEmail='',currentPhotoEntryId=null,pendingPhotoBase64=null;
+
+function fmtR(v){return'R$ '+v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}
+function getNow(){const n=new Date();return{date:n.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit'}),time:n.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),ts:n.getTime()}}
+let toastTimer;
+function showToast(msg,isError=false){const t=document.getElementById('toast');t.textContent=msg;t.className='toast show'+(isError?' error':'');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.className='toast',2800)}
+function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById('app').style.display='none';const s=document.getElementById(id);if(s){s.classList.add('active')}}
+function showApp(){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById('app').style.display='block';document.getElementById('hero-user').textContent='Olá, '+userName;document.getElementById('month-label').textContent=new Date().toLocaleDateString('pt-BR',{month:'long',year:'numeric'});loadEntries()}
+function showErr(id,msg){const el=document.getElementById(id);el.textContent=msg;el.classList.add('show')}
+function hideErr(id){document.getElementById(id).classList.remove('show')}
+function showSuc(id,msg){const el=document.getElementById(id);el.textContent=msg;el.classList.add('show')}
+
+async function api(path,opts={}){
+  const headers={'Content-Type':'application/json',...(authToken?{Authorization:'Bearer '+authToken}:{})};
+  const r=await fetch(path,{...opts,headers:{...headers,...(opts.headers||{})}});
+  return r.json();
+}
+
+async function doLogin(){
+  hideErr('login-error');
+  const email=document.getElementById('login-email').value.trim();
+  const pw=document.getElementById('login-pw').value;
+  try{
+    const d=await api('/api/auth/login',{method:'POST',body:JSON.stringify({email,password:pw})});
+    if(d.error){
+      if(d.unverified){pendingEmail=email;show('screen-verify');document.getElementById('verify-hint').textContent='Digite o código enviado para '+email;return}
+      showErr('login-error',d.error);return;
+    }
+    authToken=d.token;userName=d.name;
+    localStorage.setItem('token',authToken);localStorage.setItem('uname',userName);
+    showApp();
+  }catch(e){showErr('login-error','Erro de conexão')}
+}
+
+async function doRegister(){
+  hideErr('reg-error');
+  const name=document.getElementById('reg-name').value.trim();
+  const email=document.getElementById('reg-email').value.trim();
+  const pw=document.getElementById('reg-pw').value;
+  try{
+    const d=await api('/api/auth/register',{method:'POST',body:JSON.stringify({name,email,password:pw})});
+    if(d.error){showErr('reg-error',d.error);return}
+    pendingEmail=email;
+    showSuc('reg-success','Conta criada! Verifique seu e-mail.');
+    setTimeout(()=>{show('screen-verify');document.getElementById('verify-hint').textContent='Código enviado para '+email},1500);
+  }catch(e){showErr('reg-error','Erro de conexão')}
+}
+
+async function doVerify(){
+  hideErr('verify-error');
+  const code=document.getElementById('verify-code').value.trim().toUpperCase();
+  try{
+    const d=await api('/api/auth/verify',{method:'POST',body:JSON.stringify({email:pendingEmail,code})});
+    if(d.error){showErr('verify-error',d.error);return}
+    authToken=d.token;userName=d.name;
+    localStorage.setItem('token',authToken);localStorage.setItem('uname',userName);
+    showApp();
+  }catch(e){showErr('verify-error','Erro de conexão')}
+}
+
+async function doForgot(){
+  hideErr('forgot-error');
+  const email=document.getElementById('forgot-email').value.trim();
+  try{
+    await api('/api/auth/forgot',{method:'POST',body:JSON.stringify({email})});
+    showSuc('forgot-success','Se o e-mail existir, o código foi enviado.');
+    document.getElementById('reset-email').value=email;
+    setTimeout(()=>show('screen-reset'),2000);
+  }catch(e){showErr('forgot-error','Erro de conexão')}
+}
+
+async function doReset(){
+  hideErr('reset-error');
+  const email=document.getElementById('reset-email').value.trim();
+  const code=document.getElementById('reset-code').value.trim().toUpperCase();
+  const pw=document.getElementById('reset-pw').value;
+  try{
+    const d=await api('/api/auth/reset',{method:'POST',body:JSON.stringify({email,code,password:pw})});
+    if(d.error){showErr('reset-error',d.error);return}
+    showToast('Senha redefinida! Faça login.');
+    show('screen-login');
+  }catch(e){showErr('reset-error','Erro de conexão')}
+}
+
+function doLogout(){authToken=null;userName=null;localStorage.removeItem('token');localStorage.removeItem('uname');entries=[];show('screen-login')}
+
+async function loadEntries(){
+  try{const d=await api('/api/despesas');entries=d;render()}catch(e){showToast('Erro ao carregar',true)}
+}
+
+async function addEntry(cat,val){
+  const entry={cat,val:parseFloat(val),...getNow()};
+  try{
+    const d=await api('/api/despesas',{method:'POST',body:JSON.stringify(entry)});
+    if(!d.ok)throw new Error();
+    entry.id=d.id;entries.unshift(entry);render();
+    showToast(cat+': '+fmtR(parseFloat(val))+' salvo');
+  }catch(e){showToast('Erro ao salvar',true)}
+}
+
+async function deleteEntry(id){
+  try{await api('/api/despesas/'+id,{method:'DELETE'});entries=entries.filter(e=>e.id!==id);render();showToast('Removido')}catch(e){showToast('Erro',true)}
+}
+
+async function clearAll(){
+  if(!confirm('Limpar todos os lançamentos?'))return;
+  try{await api('/api/despesas/clear',{method:'POST'});entries=[];render();showToast('Lançamentos removidos')}catch(e){showToast('Erro',true)}
+}
+
+function render(){
+  const total=entries.reduce((s,e)=>s+e.val,0);
+  const catSet=new Set(entries.map(e=>e.cat));
+  document.getElementById('total-val').textContent=fmtR(total);
+  document.getElementById('count-val').textContent=entries.length;
+  document.getElementById('cats-val').textContent=catSet.size;
+  document.getElementById('hero-sub').textContent=entries.length===0?'Nenhum lançamento ainda':entries.length===1?'1 lançamento registrado':entries.length+' lançamentos registrados';
+  const lc=document.getElementById('list-container');
+  if(!entries.length){lc.innerHTML='<div class="entries-card"><div class="empty"><i class="ti ti-receipt-off"></i>Nenhum lançamento ainda</div></div>';return}
+  lc.innerHTML='<div class="entries-card">'+entries.map(e=>{
+    const m=CAT_META[e.cat]||CAT_META['Outros'];
+    const hp=!!e.photo;
+    const pc=hp?`<img src="/api/photo/${e.photo}" alt="foto">`:`<i class="ti ti-camera-plus"></i>`;
+    return`<div class="entry"><div class="entry-icon" style="background:${m.bg}"><i class="ti ${m.icon}" style="color:${m.color}"></i></div><div class="entry-body"><div class="entry-cat">${e.cat}</div><div class="entry-dt"><span><i class="ti ti-calendar" style="font-size:11px;vertical-align:-1px"></i> ${e.date}</span><span><i class="ti ti-clock" style="font-size:11px;vertical-align:-1px"></i> ${e.time}</span></div></div><div class="entry-actions"><span class="entry-amount">${fmtR(e.val)}</span><button class="photo-btn${hp?' has-photo':''}" onclick="openModal(${e.id})">${pc}</button><button class="del-btn" onclick="deleteEntry(${e.id})"><i class="ti ti-trash"></i></button></div></div>`;
+  }).join('')+'</div>';
+  const catTotals={};entries.forEach(e=>{catTotals[e.cat]=(catTotals[e.cat]||0)+e.val});
+  const sorted=Object.entries(catTotals).sort((a,b)=>b[1]-a[1]);
+  const cc=document.getElementById('chart-container');
+  if(!sorted.length){cc.innerHTML='<div class="empty">Nenhum dado ainda</div>';return}
+  const mv=sorted[0][1];
+  cc.innerHTML=sorted.map(([cat,val],i)=>`<div class="bar-row"><div class="bar-label">${cat}</div><div class="bar-track"><div class="bar-fill" style="width:${Math.round(val/mv*100)}%;background:${BAR_COLORS[i%BAR_COLORS.length]}"></div></div><div class="bar-val">${fmtR(val)}</div></div>`).join('');
+}
+
+function openModal(eid){
+  currentPhotoEntryId=eid;pendingPhotoBase64=null;
+  const e=entries.find(x=>x.id===eid);
+  const prev=document.getElementById('modal-preview');
+  const rb=document.getElementById('modal-remove-btn');
+  const sb=document.getElementById('modal-save-btn');
+  if(e&&e.photo){prev.innerHTML=`<img src="/api/photo/${e.photo}" onclick="openViewer('/api/photo/${e.photo}')" style="cursor:zoom-in">`;rb.style.display='';sb.style.display='none'}
+  else{prev.innerHTML='<div class="placeholder"><i class="ti ti-photo"></i>Nenhuma foto ainda</div>';rb.style.display='none';sb.style.display=''}
+  document.getElementById('photo-modal').classList.add('open');
+}
+function closeModal(){document.getElementById('photo-modal').classList.remove('open');currentPhotoEntryId=null;pendingPhotoBase64=null}
+function triggerCamera(){document.getElementById('input-camera').click()}
+function triggerGallery(){document.getElementById('input-gallery').click()}
+function handleFile(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=ev=>{pendingPhotoBase64=ev.target.result;document.getElementById('modal-preview').innerHTML=`<img src="${pendingPhotoBase64}">`;document.getElementById('modal-save-btn').style.display='';document.getElementById('modal-remove-btn').style.display='none'};
+  reader.readAsDataURL(file);
+}
+async function savePhoto(){
+  if(!pendingPhotoBase64||!currentPhotoEntryId)return;
+  try{
+    const d=await api('/api/photo',{method:'POST',body:JSON.stringify({id:currentPhotoEntryId,image:pendingPhotoBase64})});
+    if(d.ok){const e=entries.find(x=>x.id===currentPhotoEntryId);if(e)e.photo=d.photo;showToast('Foto salva!');closeModal();render()}
+  }catch(e){showToast('Erro ao salvar foto',true)}
+}
+async function removePhoto(){
+  try{
+    await api('/api/photo',{method:'POST',body:JSON.stringify({id:currentPhotoEntryId,image:''})});
+    const e=entries.find(x=>x.id===currentPhotoEntryId);if(e)delete e.photo;
+    showToast('Foto removida');closeModal();render();
+  }catch(e){showToast('Erro',true)}
+}
+function openViewer(src){document.getElementById('viewer-img').src=src;document.getElementById('photo-viewer').classList.add('open')}
+function closeViewer(){document.getElementById('photo-viewer').classList.remove('open')}
+document.getElementById('photo-modal').addEventListener('click',function(e){if(e.target===this)closeModal()});
+
+function parseVoice(text){
+  const lower=text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const catMap={};Object.keys(CAT_META).forEach(c=>{catMap[c.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')]=c});
+  let foundCat=null;for(const[k,v]of Object.entries(catMap)){if(lower.includes(k)){foundCat=v;break}}
+  const nums=text.match(/\d+([.,]\d{1,2})?/g);
+  return{cat:foundCat,val:nums?parseFloat(nums[0].replace(',','.')):null};
+}
+function addManual(){
+  const cat=document.getElementById('manual-cat').value;const val=document.getElementById('manual-val').value;
+  if(!cat||!val||parseFloat(val)<=0){showToast('Preencha categoria e valor',true);return}
+  addEntry(cat,val);document.getElementById('manual-cat').value='';document.getElementById('manual-val').value='';
+}
+const micBtn=document.getElementById('mic-btn');
+let recognition=null,listening=false;
+function setupSpeech(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){document.getElementById('mic-status').textContent='Voz não suportada neste navegador';micBtn.disabled=true;return}
+  recognition=new SR();recognition.lang='pt-BR';recognition.continuous=false;recognition.interimResults=true;
+  recognition.onstart=()=>{listening=true;micBtn.classList.add('listening');document.getElementById('transcript').textContent='Ouvindo...';document.getElementById('mic-status').textContent='Fale agora'};
+  recognition.onresult=e=>{
+    let interim='',final='';
+    for(let i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal)final+=e.results[i][0].transcript;else interim+=e.results[i][0].transcript}
+    document.getElementById('transcript').textContent=final||interim||'Ouvindo...';
+    if(final){const{cat,val}=parseVoice(final);if(cat&&val&&val>0){addEntry(cat,val);document.getElementById('transcript').textContent=cat+': '+fmtR(val);document.getElementById('mic-status').textContent='Salvo!'}else{document.getElementById('mic-status').textContent='Não entendi. Tente: "Alimentação 150"'}}
+  };
+  recognition.onerror=e=>{document.getElementById('mic-status').textContent=e.error==='not-allowed'?'Microfone negado':'Erro, tente novamente';stopListening()};
+  recognition.onend=()=>stopListening();
+}
+function stopListening(){listening=false;micBtn.classList.remove('listening');setTimeout(()=>{if(!listening){document.getElementById('transcript').textContent='Toque no microfone e fale';document.getElementById('mic-status').textContent='Ex: "Combustível 300" · "Lazer 80"'}},2500)}
+micBtn.addEventListener('click',()=>{
+  if(!recognition){setupSpeech();if(!recognition)return}
+  if(listening){recognition.stop();stopListening()}else{try{recognition.start()}catch(e){recognition=null;setupSpeech();recognition&&recognition.start()}}
+});
+
+// INIT
+if(authToken&&userName){showApp()}else{show('screen-login')}
+</script>
+</body>
+</html>
