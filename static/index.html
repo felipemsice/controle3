@@ -87,7 +87,7 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
 .bar-val{font-size:12px;color:var(--text-2);width:76px;text-align:right;flex-shrink:0;white-space:nowrap}
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;align-items:flex-end;justify-content:center}
 .modal-overlay.open{display:flex}
-.modal{background:var(--surface);border-radius:24px 24px 0 0;padding:20px 20px calc(20px + env(safe-area-inset-bottom));width:100%;max-width:480px}
+.modal{background:var(--surface);border-radius:24px 24px 0 0;padding:20px 20px calc(20px + env(safe-area-inset-bottom));width:100%;max-width:480px;max-height:90vh;overflow-y:auto}
 .modal-title{font-size:16px;font-weight:600;color:var(--text);margin-bottom:16px;text-align:center}
 .modal-preview{width:100%;height:200px;border-radius:var(--radius);background:var(--bg);border:1px solid var(--border);overflow:hidden;margin-bottom:14px;display:flex;align-items:center;justify-content:center}
 .modal-preview img{width:100%;height:100%;object-fit:contain}
@@ -98,6 +98,28 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
 .modal-btn.primary{background:var(--green);color:#fff;border-color:var(--green)}
 .modal-btn.danger{background:var(--red-light);color:var(--red);border-color:var(--red)}
 .modal-cancel{width:100%;height:48px;border-radius:var(--radius-sm);border:none;background:none;color:var(--text-3);font-size:15px;cursor:pointer;font-family:inherit}
+
+/* CATEGORIAS MODAL */
+.cat-modal{background:var(--surface);border-radius:24px 24px 0 0;padding:20px 20px calc(20px + env(safe-area-inset-bottom));width:100%;max-width:480px;max-height:85vh;display:flex;flex-direction:column}
+.cat-list{flex:1;overflow-y:auto;margin-bottom:14px}
+.cat-item{display:flex;align-items:center;gap:10px;padding:11px 4px;border-bottom:1px solid var(--border)}
+.cat-item:last-child{border-bottom:none}
+.cat-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.cat-nome{flex:1;font-size:14px;font-weight:500;color:var(--text)}
+.cat-badge-padrao{font-size:10px;color:var(--text-3);background:var(--bg);border:1px solid var(--border);padding:2px 7px;border-radius:999px}
+.cat-del{width:32px;height:32px;border-radius:8px;background:none;border:none;cursor:pointer;color:var(--text-3);font-size:16px;display:flex;align-items:center;justify-content:center}
+.cat-del:active{color:var(--red);background:var(--red-light)}
+.cat-add-row{display:flex;gap:8px;padding-top:14px;border-top:1px solid var(--border)}
+.cat-add-input{flex:1;height:44px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 12px;font-size:15px;background:var(--bg);color:var(--text);font-family:inherit;-webkit-appearance:none}
+.cat-add-input:focus{outline:2px solid var(--green);outline-offset:-1px}
+.cat-add-btn{height:44px;padding:0 16px;border-radius:var(--radius-sm);border:none;background:var(--green);color:#fff;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap}
+.cat-err{font-size:12px;color:var(--red);margin-top:6px;display:none}
+.cat-err.show{display:block}
+
+/* PALETA DE CORES */
+.color-picker{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.color-dot{width:28px;height:28px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:transform .15s}
+.color-dot.selected{border-color:var(--text);transform:scale(1.15)}
 .viewer{display:none;position:fixed;inset:0;background:#000;z-index:200;align-items:center;justify-content:center}
 .viewer.open{display:flex}
 .viewer img{max-width:100%;max-height:100%;object-fit:contain}
@@ -208,7 +230,9 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
     </div>
   </div>
   <div class="section">
-    <div class="section-head"><span class="section-title">Adicionar manualmente</span></div>
+    <div class="section-head"><span class="section-title">Adicionar manualmente</span>
+      <button class="section-action" onclick="openCatModal()"><i class="ti ti-settings" style="font-size:13px;vertical-align:-1px"></i> Categorias</button>
+    </div>
     <div class="manual-card">
       <div class="field-row">
         <select id="manual-cat">
@@ -229,6 +253,26 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
   <div class="section">
     <div class="section-head"><span class="section-title">Por categoria</span></div>
     <div class="chart-card" id="chart-container"><div class="empty">Nenhum dado ainda</div></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="cat-modal-overlay">
+  <div class="cat-modal">
+    <div class="modal-title">Gerenciar Categorias</div>
+    <div class="cat-list" id="cat-list"></div>
+    <div>
+      <div style="font-size:12px;color:var(--text-3);margin-bottom:8px;font-weight:500">ADICIONAR NOVA CATEGORIA</div>
+      <div style="margin-bottom:8px">
+        <div style="font-size:12px;color:var(--text-3);margin-bottom:6px">Cor</div>
+        <div class="color-picker" id="color-picker"></div>
+      </div>
+      <div class="cat-add-row">
+        <input class="cat-add-input" type="text" id="cat-add-input" placeholder="Ex: Pet, Academia, Viagem..." maxlength="30">
+        <button class="cat-add-btn" onclick="addCategoria()">+ Adicionar</button>
+      </div>
+      <div class="cat-err" id="cat-err"></div>
+    </div>
+    <button class="modal-cancel" style="margin-top:12px" onclick="closeCatModal()">Fechar</button>
   </div>
 </div>
 
@@ -260,7 +304,6 @@ function getNow(){const n=new Date();return{date:n.toLocaleDateString('pt-BR',{d
 let toastTimer;
 function showToast(msg,isError=false){const t=document.getElementById('toast');t.textContent=msg;t.className='toast show'+(isError?' error':'');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.className='toast',2800)}
 function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById('app').style.display='none';const s=document.getElementById(id);if(s)s.classList.add('active')}
-function showApp(){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById('app').style.display='block';document.getElementById('hero-user').textContent='Olá, '+userName;document.getElementById('month-label').textContent=new Date().toLocaleDateString('pt-BR',{month:'long',year:'numeric'});loadEntries()}
 function showErr(id,msg){const el=document.getElementById(id);el.textContent=msg;el.classList.add('show')}
 function hideErr(id){document.getElementById(id).classList.remove('show')}
 function showSuc(id,msg){const el=document.getElementById(id);el.textContent=msg;el.classList.add('show')}
@@ -337,6 +380,14 @@ function doLogout(){authToken=null;userName=null;localStorage.removeItem('token'
 
 async function loadEntries(){try{entries=await api('/api/despesas');render()}catch(e){showToast('Erro ao carregar',true)}}
 
+function showApp(){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('app').style.display='block';
+  document.getElementById('hero-user').textContent='Olá, '+userName;
+  document.getElementById('month-label').textContent=new Date().toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+  loadCategorias().then(()=>loadEntries());
+}
+
 async function addEntry(cat,val){
   const entry={cat,val:parseFloat(val),...getNow()};
   try{
@@ -405,7 +456,129 @@ function openViewer(src){document.getElementById('viewer-img').src=src;document.
 function closeViewer(){document.getElementById('photo-viewer').classList.remove('open')}
 document.getElementById('photo-modal').addEventListener('click',function(e){if(e.target===this)closeModal()});
 
-function parseVoice(text){
+const CAT_CORES=[
+  {bg:'#E1F5EE',color:'#085041',bar:'#1D9E75'},
+  {bg:'#E6F1FB',color:'#042C53',bar:'#378ADD'},
+  {bg:'#FAEEDA',color:'#412402',bar:'#BA7517'},
+  {bg:'#FAECE7',color:'#4A1B0C',bar:'#D85A30'},
+  {bg:'#EEEDFE',color:'#26215C',bar:'#534AB7'},
+  {bg:'#EAF3DE',color:'#173404',bar:'#639922'},
+  {bg:'#FBEAF0',color:'#4B1528',bar:'#993556'},
+  {bg:'#FFF3E0',color:'#4A2500',bar:'#E65100'},
+  {bg:'#E8F5E9',color:'#1B5E20',bar:'#2E7D32'},
+  {bg:'#F3E5F5',color:'#4A148C',bar:'#7B1FA2'},
+  {bg:'#E0F7FA',color:'#006064',bar:'#00838F'},
+  {bg:'#F5F5F5',color:'#212121',bar:'#616161'},
+];
+let selectedCor=0;
+let customCats=[];
+
+function initColorPicker(){
+  const cp=document.getElementById('color-picker');
+  cp.innerHTML=CAT_CORES.map((c,i)=>
+    `<div class="color-dot${i===selectedCor?' selected':''}" style="background:${c.bar}" onclick="selectCor(${i})" title="${c.bar}"></div>`
+  ).join('');
+}
+
+function selectCor(i){
+  selectedCor=i;
+  document.querySelectorAll('.color-dot').forEach((d,j)=>d.classList.toggle('selected',j===i));
+}
+
+async function loadCategorias(){
+  try{
+    const d=await api('/api/categorias');
+    customCats=d.custom||[];
+    buildCatMeta();
+    rebuildCatSelect();
+  }catch(e){}
+}
+
+function buildCatMeta(){
+  customCats.forEach(c=>{
+    CAT_META[c.nome]={bg:c.cor_bg,color:c.cor_text,icon:c.icone||'ti-tag',bar:c.cor_bar};
+  });
+}
+
+function rebuildCatSelect(){
+  const sel=document.getElementById('manual-cat');
+  const prev=sel.value;
+  sel.innerHTML='<option value="">Categoria</option>';
+  const PADRAO=['Combustível','Alimentação','Lazer','Saúde','Transporte','Moradia','Educação','Vestuário','Outros'];
+  PADRAO.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;sel.appendChild(o)});
+  if(customCats.length){
+    const sep=document.createElement('option');sep.disabled=true;sep.textContent='── Personalizadas ──';sel.appendChild(sep);
+    customCats.forEach(c=>{const o=document.createElement('option');o.value=c.nome;o.textContent=c.nome;sel.appendChild(o)});
+  }
+  if(prev)sel.value=prev;
+}
+
+function openCatModal(){
+  initColorPicker();
+  renderCatList();
+  document.getElementById('cat-modal-overlay').classList.add('open');
+}
+function closeCatModal(){document.getElementById('cat-modal-overlay').classList.remove('open')}
+document.getElementById('cat-modal-overlay').addEventListener('click',function(e){if(e.target===this)closeCatModal()});
+
+function renderCatList(){
+  const PADRAO=['Combustível','Alimentação','Lazer','Saúde','Transporte','Moradia','Educação','Vestuário','Outros'];
+  const list=document.getElementById('cat-list');
+  const padraoHTML=PADRAO.map(c=>{
+    const m=CAT_META[c]||{bg:'#eee',color:'#333',icon:'ti-tag'};
+    return`<div class="cat-item">
+      <div class="cat-icon" style="background:${m.bg}"><i class="ti ${m.icon}" style="color:${m.color}"></i></div>
+      <div class="cat-nome">${c}</div>
+      <span class="cat-badge-padrao">Padrão</span>
+    </div>`;
+  }).join('');
+  const customHTML=customCats.length
+    ?customCats.map(c=>{
+      const m=CAT_META[c.nome]||{bg:'#eee',color:'#333',icon:'ti-tag'};
+      return`<div class="cat-item" id="cat-item-${c.id}">
+        <div class="cat-icon" style="background:${m.bg}"><i class="ti ${m.icon||'ti-tag'}" style="color:${m.color}"></i></div>
+        <div class="cat-nome">${c.nome}</div>
+        <button class="cat-del" onclick="deleteCategoria(${c.id},'${c.nome}')" title="Remover"><i class="ti ti-trash"></i></button>
+      </div>`;
+    }).join('')
+    :'';
+  list.innerHTML=padraoHTML+(customHTML?`<div style="font-size:11px;color:var(--text-3);padding:10px 4px 4px;text-transform:uppercase;letter-spacing:.05em;font-weight:600">Personalizadas</div>`+customHTML:'');
+}
+
+async function addCategoria(){
+  const nome=document.getElementById('cat-add-input').value.trim();
+  const err=document.getElementById('cat-err');
+  err.classList.remove('show');
+  if(!nome){err.textContent='Digite um nome para a categoria';err.classList.add('show');return}
+  const cor=CAT_CORES[selectedCor];
+  try{
+    const d=await api('/api/categorias',{method:'POST',body:JSON.stringify({nome,icone:'ti-tag',cor_bg:cor.bg,cor_text:cor.color,cor_bar:cor.bar})});
+    if(d.error){err.textContent=d.error;err.classList.add('show');return}
+    customCats.push({id:d.id,nome,icone:'ti-tag',cor_bg:cor.bg,cor_text:cor.color,cor_bar:cor.bar});
+    CAT_META[nome]={bg:cor.bg,color:cor.color,icon:'ti-tag',bar:cor.bar};
+    document.getElementById('cat-add-input').value='';
+    rebuildCatSelect();
+    renderCatList();
+    showToast('Categoria "'+nome+'" criada!');
+  }catch(e){err.textContent='Erro ao criar categoria';err.classList.add('show')}
+}
+
+async function deleteCategoria(id,nome){
+  if(!confirm(`Remover a categoria "${nome}"?`))return;
+  try{
+    const d=await api('/api/categorias/'+id,{method:'DELETE'});
+    if(d.error){showToast(d.error,true);return}
+    customCats=customCats.filter(c=>c.id!==id);
+    delete CAT_META[nome];
+    rebuildCatSelect();
+    renderCatList();
+    showToast('Categoria removida');
+  }catch(e){showToast('Erro ao remover',true)}
+}
+
+document.getElementById('cat-add-input').addEventListener('keydown',e=>{if(e.key==='Enter')addCategoria()});
+
+
   const lower=text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
   const catMap={};Object.keys(CAT_META).forEach(c=>{catMap[c.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')]=c});
   let foundCat=null;for(const[k,v]of Object.entries(catMap)){if(lower.includes(k)){foundCat=v;break}}
@@ -439,7 +612,6 @@ micBtn.addEventListener('click',()=>{
   if(listening){recognition.stop();stopListening()}else{try{recognition.start()}catch(e){recognition=null;setupSpeech();recognition&&recognition.start()}}
 });
 
-if(authToken&&userName)showApp();else show('screen-login');
-</script>
+if(authToken&&userName)showApp();else show('screen-login');</script>
 </body>
 </html>
