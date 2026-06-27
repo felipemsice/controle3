@@ -112,6 +112,12 @@ def init_db():
     try:
         db.execute("ALTER TABLE users ADD COLUMN mp_sub_id TEXT DEFAULT NULL")
     except: pass
+    # Preencher trial_end para usuários que já existiam sem ele
+    trial_end_padrao = (datetime.utcnow() + timedelta(days=30)).isoformat()
+    db.execute("""
+        UPDATE users SET trial_end=? 
+        WHERE trial_end IS NULL AND plano IS NULL
+    """, (trial_end_padrao,))
     db.commit()
     db.close()
 
