@@ -511,13 +511,16 @@ function showApp(){
   document.getElementById('hero-user').textContent='Olá, '+userName;
   document.getElementById('month-label').textContent=new Date().toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
   loadContaStatus().then(()=>{
-    // Exibir modal de trial apenas no primeiro acesso
+    // Exibir modal de trial apenas na primeira vez
     if(contaStatus&&contaStatus.status==='trial'&&!localStorage.getItem('trial_modal_shown')){
       showTrialModal(contaStatus.trial_dias||30);
     }
     loadCategorias().then(()=>loadEntries());
   });
 }
+
+// Para testar: limpar o flag do modal
+// localStorage.removeItem('trial_modal_shown')
 
 async function addEntry(cat,val){
   // Verificar plano antes de adicionar
