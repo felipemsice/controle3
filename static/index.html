@@ -444,12 +444,10 @@ async function doLogin(){
   const pw=document.getElementById('login-pw').value;
   try{
     const d=await api('/api/auth/login',{method:'POST',body:JSON.stringify({phone,password:pw})});
-    if(d.error){
-      if(d.unverified){pendingPhone=phone;show('screen-verify');document.getElementById('verify-hint').textContent='Código enviado para '+phone;return}
-      showErr('login-err',d.error);return;
-    }
+    if(d.error){showErr('login-err',d.error);return}
     authToken=d.token;userName=d.name;
-    localStorage.setItem('token',authToken);localStorage.setItem('uname',userName);showApp();
+    localStorage.setItem('token',authToken);localStorage.setItem('uname',userName);
+    showApp();
   }catch(e){showErr('login-err','Erro de conexão')}
 }
 
@@ -461,9 +459,10 @@ async function doRegister(){
   try{
     const d=await api('/api/auth/register',{method:'POST',body:JSON.stringify({name,phone,password:pw})});
     if(d.error){showErr('reg-err',d.error);return}
-    pendingPhone=phone;
-    showSuc('reg-suc','Conta criada! Verifique seu SMS.');
-    setTimeout(()=>{show('screen-verify');document.getElementById('verify-hint').textContent='Código SMS enviado para '+phone},1500);
+    // Login direto — sem SMS
+    authToken=d.token;userName=d.name;
+    localStorage.setItem('token',authToken);localStorage.setItem('uname',userName);
+    showApp();
   }catch(e){showErr('reg-err','Erro de conexão')}
 }
 
