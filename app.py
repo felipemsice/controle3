@@ -112,6 +112,10 @@ def init_db():
     try:
         db.execute("ALTER TABLE users ADD COLUMN mp_sub_id TEXT DEFAULT NULL")
     except: pass
+    # Migração: coluna photo_data para armazenar foto em base64 no banco
+    try:
+        db.execute("ALTER TABLE despesas ADD COLUMN photo_data TEXT")
+    except: pass
     # Preencher trial_end para usuários que já existiam sem ele
     trial_end_padrao = (datetime.utcnow() + timedelta(days=30)).isoformat()
     db.execute("""
@@ -382,9 +386,12 @@ def delete_despesa(eid):
     db  = get_db()
     row = db.execute('SELECT * FROM despesas WHERE id=? AND user_id=?', (eid, g.user_id)).fetchone()
     if not row: return jsonify({'error': 'Não encontrado'}), 404
-    if row['photo']:
+    # Tentar remover arquivo legado se existir
+    if row['photo'] and not row['photo'].startswith('db:'):
         p = os.path.join(PHOTOS_DIR, row['photo'])
-        if os.path.exists(p): os.remove(p)
+        if os.path.exists(p):
+            try: os.remove(p)
+            except: pass
     db.execute('DELETE FROM despesas WHERE id=?', (eid,))
     db.commit()
     return jsonify({'ok': True})
@@ -395,14 +402,16 @@ def clear_despesas():
     db   = get_db()
     rows = db.execute('SELECT photo FROM despesas WHERE user_id=?', (g.user_id,)).fetchall()
     for r in rows:
-        if r['photo']:
+        if r['photo'] and not r['photo'].startswith('db:'):
             p = os.path.join(PHOTOS_DIR, r['photo'])
-            if os.path.exists(p): os.remove(p)
+            if os.path.exists(p):
+                try: os.remove(p)
+                except: pass
     db.execute('DELETE FROM despesas WHERE user_id=?', (g.user_id,))
     db.commit()
     return jsonify({'ok': True})
 
-# ── FOTOS ────────────────────────────────────────────────
+# ── FOTOS (salvas em base64 no banco) ────────────────────
 @app.route('/api/photo', methods=['POST'])
 @require_auth
 def upload_photo():
@@ -410,29 +419,54 @@ def upload_photo():
     eid     = d.get('id')
     img_b64 = d.get('image','')
     db      = get_db()
-    row     = db.execute('SELECT * FROM despesas WHERE id=? AND user_id=?', (eid, g.user_id)).fetchone()
+    row     = db.execute(
+        'SELECT * FROM despesas WHERE id=? AND user_id=?', (eid, g.user_id)
+    ).fetchone()
     if not row: return jsonify({'error': 'Não encontrado'}), 404
     if not img_b64:
-        if row['photo']:
-            p = os.path.join(PHOTOS_DIR, row['photo'])
-            if os.path.exists(p): os.remove(p)
-        db.execute('UPDATE despesas SET photo=NULL WHERE id=?', (eid,))
+        # Remover foto
+        db.execute('UPDATE despesas SET photo=NULL, photo_data=NULL WHERE id=?', (eid,))
         db.commit()
         return jsonify({'ok': True})
-    if ',' in img_b64: img_b64 = img_b64.split(',')[1]
-    filename = f"{g.user_id}_{eid}.jpg"
-    with open(os.path.join(PHOTOS_DIR, filename), 'wb') as f:
-        f.write(base64.b64decode(img_b64))
-    db.execute('UPDATE despesas SET photo=? WHERE id=?', (filename, eid))
+    # Garantir que está no formato data URL completo
+    if not img_b64.startswith('data:'):
+        img_b64 = 'data:image/jpeg;base64,' + img_b64
+    # Comprimir: manter só base64 puro no banco, reconstituir data URL na saída
+    b64_puro = img_b64.split(',')[1] if ',' in img_b64 else img_b64
+    ref = f"db:{g.user_id}_{eid}"
+    db.execute(
+        'UPDATE despesas SET photo=?, photo_data=? WHERE id=?',
+        (ref, b64_puro, eid)
+    )
     db.commit()
-    return jsonify({'ok': True, 'photo': filename})
+    return jsonify({'ok': True, 'photo': ref})
 
-@app.route('/api/photo/<filename>', methods=['GET'])
+@app.route('/api/photo/<path:ref>', methods=['GET'])
 @require_auth
-def get_photo(filename):
-    if not filename.startswith(f"{g.user_id}_"):
+def get_photo(ref):
+    db = get_db()
+    # Novo formato: db:userid_entryid
+    if ref.startswith('db:'):
+        parts = ref[3:].split('_')
+        if str(g.user_id) != parts[0]:
+            return jsonify({'error': 'Acesso negado'}), 403
+        eid = parts[1]
+        row = db.execute(
+            'SELECT photo_data FROM despesas WHERE id=? AND user_id=?',
+            (eid, g.user_id)
+        ).fetchone()
+        if not row or not row['photo_data']:
+            return '', 404
+        img_bytes = base64.b64decode(row['photo_data'])
+        from flask import Response
+        return Response(img_bytes, mimetype='image/jpeg')
+    # Formato antigo: arquivo em disco (fallback)
+    if not ref.startswith(f"{g.user_id}_"):
         return jsonify({'error': 'Acesso negado'}), 403
-    return send_from_directory(PHOTOS_DIR, filename)
+    photo_path = os.path.join(PHOTOS_DIR, ref)
+    if os.path.exists(photo_path):
+        return send_from_directory(PHOTOS_DIR, ref)
+    return '', 404
 
 # ── PAGAMENTO MERCADO PAGO ───────────────────────────────
 @app.route('/api/pagamento/criar', methods=['POST'])
