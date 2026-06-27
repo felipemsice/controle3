@@ -227,7 +227,7 @@ def relatorios_page():
 def assinar_page():
     return send_from_directory('static/assinar', 'index.html')
 
-# ── AUTH: CADASTRO ───────────────────────────────────────
+# ── AUTH: CADASTRO (sem SMS) ─────────────────────────────
 @app.route('/api/auth/register', methods=['POST'])
 def register():
     d     = request.get_json()
@@ -239,32 +239,26 @@ def register():
     if len(pw) < 6:
         return jsonify({'error': 'Senha mínimo 6 caracteres'}), 400
     db = get_db()
-    existing = db.execute('SELECT id,verified FROM users WHERE phone=?', (phone,)).fetchone()
+    existing = db.execute('SELECT id FROM users WHERE phone=?', (phone,)).fetchone()
     if existing:
-        if existing['verified']:
-            return jsonify({'error': 'Telefone já cadastrado'}), 409
-        if send_sms_code(phone):
-            return jsonify({'ok': True, 'message': 'Código reenviado'})
-        return jsonify({'error': 'Erro ao enviar SMS'}), 500
+        return jsonify({'error': 'Telefone já cadastrado'}), 409
     trial_end = (datetime.utcnow() + timedelta(days=30)).isoformat()
-    db.execute('INSERT INTO users (name,phone,password,trial_end) VALUES (?,?,?,?)',
+    db.execute('INSERT INTO users (name,phone,password,trial_end,verified) VALUES (?,?,?,?,1)',
                (name, phone, hash_password(pw), trial_end))
     db.commit()
-    if send_sms_code(phone):
-        return jsonify({'ok': True, 'message': 'Código enviado por SMS'})
-    return jsonify({'error': 'Erro ao enviar SMS'}), 500
+    user = db.execute('SELECT * FROM users WHERE phone=?', (phone,)).fetchone()
+    return jsonify({'ok': True, 'token': make_token(user['id']), 'name': user['name']})
 
 @app.route('/api/auth/verify', methods=['POST'])
 def verify_phone():
+    # Mantido por compatibilidade mas não é mais necessário
     d     = request.get_json()
     phone = fmt_phone(d.get('phone',''))
-    code  = d.get('code','').strip()
-    if not check_sms_code(phone, code):
-        return jsonify({'error': 'Código inválido ou expirado'}), 400
-    db = get_db()
+    db    = get_db()
     db.execute('UPDATE users SET verified=1 WHERE phone=?', (phone,))
     db.commit()
     user = db.execute('SELECT * FROM users WHERE phone=?', (phone,)).fetchone()
+    if not user: return jsonify({'error': 'Usuário não encontrado'}), 404
     return jsonify({'ok': True, 'token': make_token(user['id']), 'name': user['name']})
 
 @app.route('/api/auth/login', methods=['POST'])
@@ -276,30 +270,24 @@ def login():
     user  = db.execute('SELECT * FROM users WHERE phone=?', (phone,)).fetchone()
     if not user or user['password'] != hash_password(pw):
         return jsonify({'error': 'Telefone ou senha incorretos'}), 401
-    if not user['verified']:
-        send_sms_code(phone)
-        return jsonify({'error': 'Confirme seu telefone', 'unverified': True}), 403
     if not user['active']:
         return jsonify({'error': 'Conta desativada'}), 403
     return jsonify({'ok': True, 'token': make_token(user['id']), 'name': user['name']})
 
 @app.route('/api/auth/forgot', methods=['POST'])
 def forgot():
-    phone = fmt_phone(request.get_json().get('phone',''))
-    db    = get_db()
-    user  = db.execute('SELECT * FROM users WHERE phone=?', (phone,)).fetchone()
-    if not user: return jsonify({'ok': True})
-    if send_sms_code(phone): return jsonify({'ok': True})
-    return jsonify({'error': 'Erro ao enviar SMS'}), 500
+    # Sem SMS: informa que deve contatar o ADM
+    return jsonify({'ok': True, 'message': 'Entre em contato com o administrador para redefinir sua senha.'})
 
 @app.route('/api/auth/reset', methods=['POST'])
 def reset_password():
     d      = request.get_json()
     phone  = fmt_phone(d.get('phone',''))
-    code   = d.get('code','').strip()
     new_pw = d.get('password','')
-    if len(new_pw) < 6: return jsonify({'error': 'Senha mínimo 6 caracteres'}), 400
-    if not check_sms_code(phone, code): return jsonify({'error': 'Código inválido'}), 400
+    token  = d.get('token','')
+    # Requer token ADM para reset externo
+    if len(new_pw) < 6:
+        return jsonify({'error': 'Senha mínimo 6 caracteres'}), 400
     db = get_db()
     db.execute('UPDATE users SET password=? WHERE phone=?', (hash_password(new_pw), phone))
     db.commit()
@@ -593,6 +581,20 @@ def adm_toggle_user(uid):
     db.execute('UPDATE users SET active=? WHERE id=?', (new, uid))
     db.commit()
     return jsonify({'ok': True, 'active': new})
+
+@app.route('/api/adm/users/<int:uid>/reset-senha', methods=['POST'])
+@require_adm
+def adm_reset_senha(uid):
+    d      = request.get_json()
+    new_pw = d.get('password','').strip()
+    if len(new_pw) < 6:
+        return jsonify({'error': 'Senha mínimo 6 caracteres'}), 400
+    db = get_db()
+    row = db.execute('SELECT id FROM users WHERE id=?', (uid,)).fetchone()
+    if not row: return jsonify({'error': 'Usuário não encontrado'}), 404
+    db.execute('UPDATE users SET password=? WHERE id=?', (hash_password(new_pw), uid))
+    db.commit()
+    return jsonify({'ok': True})
 
 @app.route('/api/adm/users/<int:uid>/plano', methods=['POST'])
 @require_adm
