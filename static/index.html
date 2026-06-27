@@ -44,6 +44,15 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
 .hero-total-label{font-size:13px;color:var(--green-mid);margin-bottom:4px}
 .hero-total{font-size:40px;font-weight:700;color:#fff;letter-spacing:-.03em;line-height:1}
 .hero-sub{font-size:13px;color:var(--green-mid);margin-top:6px}
+.status-banner{display:flex;align-items:center;gap:10px;padding:10px 16px;font-size:13px;font-weight:500}
+.status-banner.trial{background:#FAEEDA;color:#412402}
+.status-banner.expirado{background:var(--red-light);color:var(--red)}
+.status-banner.ativo-green{background:var(--green-light);color:var(--green-dark)}
+.status-banner.ativo-amber{background:#FAEEDA;color:#412402}
+.status-banner.ativo-red{background:var(--red-light);color:var(--red)}
+.status-banner i{font-size:16px;flex-shrink:0}
+.status-banner span{flex:1}
+.banner-btn{background:var(--green);color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer;text-decoration:none;white-space:nowrap;font-family:inherit}
 .logout-btn{background:rgba(255,255,255,.12);border:none;color:var(--green-mid);font-size:12px;padding:6px 10px;border-radius:8px;cursor:pointer}
 .stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:24px 16px 0;position:relative;z-index:1}
 .stat{background:var(--surface);border-radius:var(--radius-sm);padding:14px 16px;border:1px solid var(--border)}
@@ -217,6 +226,7 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
     <div class="hero-total" id="total-val">R$ 0,00</div>
     <div class="hero-sub" id="hero-sub">Carregando...</div>
   </div>
+  <div id="status-banner"></div>
   <div class="stats">
     <div class="stat"><div class="stat-label">Lançamentos</div><div class="stat-value" id="count-val">—</div></div>
     <div class="stat"><div class="stat-label">Categorias</div><div class="stat-value" id="cats-val">—</div></div>
@@ -298,6 +308,7 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
 const CAT_META={'Combustível':{bg:'#E1F5EE',color:'#085041',icon:'ti-gas-station'},'Alimentação':{bg:'#E6F1FB',color:'#042C53',icon:'ti-tools-kitchen-2'},'Lazer':{bg:'#FAEEDA',color:'#412402',icon:'ti-device-gamepad-2'},'Saúde':{bg:'#FAECE7',color:'#4A1B0C',icon:'ti-heart-rate-monitor'},'Transporte':{bg:'#EEEDFE',color:'#26215C',icon:'ti-bus'},'Moradia':{bg:'#EAF3DE',color:'#173404',icon:'ti-home-2'},'Educação':{bg:'#FBEAF0',color:'#4B1528',icon:'ti-book'},'Vestuário':{bg:'#F1EFE8',color:'#2C2C2A',icon:'ti-hanger'},'Outros':{bg:'#F1EFE8',color:'#444441',icon:'ti-dots'}};
 const BAR_COLORS=['#1D9E75','#378ADD','#BA7517','#D85A30','#534AB7','#639922','#993556','#5F5E5A'];
 let entries=[],authToken=localStorage.getItem('token'),userName=localStorage.getItem('uname'),pendingPhone='',currentPhotoEntryId=null,pendingPhotoBase64=null;
+let contaStatus=null;
 
 function fmtR(v){return'R$ '+v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}
 function getNow(){const n=new Date();return{date:n.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit'}),time:n.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),ts:n.getTime()}}
@@ -311,6 +322,28 @@ function showSuc(id,msg){const el=document.getElementById(id);el.textContent=msg
 async function api(path,opts={}){
   const headers={'Content-Type':'application/json',...(authToken?{Authorization:'Bearer '+authToken}:{})};
   const r=await fetch(path,{...opts,headers});return r.json();
+}
+
+async function loadContaStatus(){
+  try{
+    contaStatus=await api('/api/conta/status');
+    renderStatusBanner();
+  }catch(e){}
+}
+
+function renderStatusBanner(){
+  const b=document.getElementById('status-banner');
+  if(!b||!contaStatus)return;
+  const s=contaStatus;
+  if(s.status==='trial'){
+    b.innerHTML=`<div class="status-banner trial"><i class="ti ti-clock"></i><span>Trial: <strong>${s.trial_dias} dias restantes</strong></span><a href="/assinar" class="banner-btn">Assinar</a></div>`;
+  } else if(s.status==='expirado'){
+    b.innerHTML=`<div class="status-banner expirado"><i class="ti ti-alert-circle"></i><span>Trial expirado — somente leitura</span><a href="/assinar" class="banner-btn">Assinar agora</a></div>`;
+  } else if(s.status==='ativo'){
+    const uso=s.uso_mes||0;const lim=s.limite;const pct=Math.round(uso/lim*100);
+    const cor=pct>=90?'red':pct>=70?'amber':'green';
+    b.innerHTML=`<div class="status-banner ativo-${cor}"><i class="ti ti-chart-donut"></i><span>${uso}/${lim} lançamentos este mês</span>${pct>=80?`<a href="/assinar" class="banner-btn">Upgrade</a>`:''}</div>`;
+  }
 }
 
 async function doLogin(){
@@ -385,7 +418,31 @@ function showApp(){
   document.getElementById('app').style.display='block';
   document.getElementById('hero-user').textContent='Olá, '+userName;
   document.getElementById('month-label').textContent=new Date().toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
-  loadCategorias().then(()=>loadEntries());
+  loadContaStatus().then(()=>loadCategorias().then(()=>loadEntries()));
+}
+
+async function addEntry(cat,val){
+  // Verificar plano antes de adicionar
+  if(contaStatus){
+    if(!contaStatus.pode_adicionar){
+      showToast('Plano expirado — assine para continuar',true);
+      setTimeout(()=>location.href='/assinar',1500);return;
+    }
+    if(contaStatus.status==='ativo'&&contaStatus.uso_mes>=contaStatus.limite){
+      showToast('Limite do mês atingido — faça upgrade',true);
+      setTimeout(()=>location.href='/assinar',1500);return;
+    }
+  }
+  const entry={cat,val:parseFloat(val),...getNow()};
+  try{
+    const d=await api('/api/despesas',{method:'POST',body:JSON.stringify(entry)});
+    if(d.error==='plano_expirado'){showToast('Plano expirado — assine para continuar',true);setTimeout(()=>location.href='/assinar',1500);return}
+    if(d.error==='limite_atingido'){showToast(`Limite de ${d.limite} lançamentos/mês atingido`,true);setTimeout(()=>location.href='/assinar',1500);return}
+    if(!d.ok)throw new Error();
+    entry.id=d.id;entries.unshift(entry);
+    if(contaStatus&&contaStatus.uso_mes!==undefined){contaStatus.uso_mes++;renderStatusBanner()}
+    render();showToast(cat+': '+fmtR(parseFloat(val))+' salvo');
+  }catch(e){showToast('Erro ao salvar',true)}
 }
 
 async function addEntry(cat,val){
