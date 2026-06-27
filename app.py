@@ -135,6 +135,10 @@ def index():
 def adm_page():
     return send_from_directory('static/admin', 'index.html')
 
+@app.route('/relatorios')
+def relatorios_page():
+    return send_from_directory('static/relatorios', 'index.html')
+
 # ── AUTH: CADASTRO ───────────────────────────────────────
 @app.route('/api/auth/register', methods=['POST'])
 def register():
