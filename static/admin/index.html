@@ -139,7 +139,13 @@ async function loadUsers(){
     if(!users.length){document.getElementById('users-list').innerHTML='<div class="empty">Nenhum usuário cadastrado</div>';return}
     document.getElementById('users-list').innerHTML=users.map(u=>{
       const initial=(u.name||'?')[0].toUpperCase();
-      const verBadge=u.verified?'<span class="pill pill-green">Verificado</span>':'<span class="pill pill-gray">Pendente</span>';
+      const planosNome={basico:'Básico',standard:'Standard',premium:'Premium'};
+      const planoStatus=u.plano_status;
+      const planoBadge=
+        planoStatus==='trial'?'<span class="pill pill-green">Trial</span>':
+        planoStatus==='ativo'?`<span class="pill pill-green">Plano ${planosNome[u.plano]||u.plano}</span>`:
+        planoStatus==='adm'?'<span class="pill pill-green">ADM</span>':
+        '<span class="pill pill-red">Expirado</span>';
       const actBadge=u.active?'<span class="pill pill-green">Ativo</span>':'<span class="pill pill-red">Inativo</span>';
       const created=u.created?new Date(u.created).toLocaleDateString('pt-BR'):'—';
       return`<div class="user-row">
@@ -149,11 +155,14 @@ async function loadUsers(){
           <div class="user-email">${u.phone}</div>
           <div class="user-meta">
             <span><i class="ti ti-calendar" style="font-size:11px;vertical-align:-1px"></i> ${created}</span>
-            <span><i class="ti ti-receipt" style="font-size:11px;vertical-align:-1px"></i> ${u.despesas_count} lançamentos</span>
-            ${verBadge} ${actBadge}
+            <span><i class="ti ti-receipt" style="font-size:11px;vertical-align:-1px"></i> ${u.despesas_count} lanç.</span>
+            ${planoBadge} ${actBadge}
           </div>
         </div>
         <div class="user-actions">
+          <button class="icon-btn" title="Redefinir senha" onclick="resetSenha(${u.id},'${u.name}')">
+            <i class="ti ti-key"></i>
+          </button>
           <button class="icon-btn toggle" title="${u.active?'Desativar':'Ativar'} usuário" onclick="toggleUser(${u.id},'${u.name}',${u.active})">
             <i class="ti ${u.active?'ti-user-off':'ti-user-check'}"></i>
           </button>
@@ -164,6 +173,17 @@ async function loadUsers(){
       </div>`;
     }).join('');
   }catch(e){document.getElementById('users-list').innerHTML='<div class="empty">Erro ao carregar usuários</div>'}
+}
+
+async function resetSenha(id,name){
+  const nova=prompt(`Nova senha para ${name} (mínimo 6 caracteres):`);
+  if(!nova)return;
+  if(nova.length<6){alert('Senha muito curta!');return}
+  try{
+    const d=await api(`/api/adm/users/${id}/reset-senha`,{method:'POST',body:JSON.stringify({password:nova})});
+    if(d.ok)showToast(`Senha de ${name} redefinida`);
+    else showToast(d.error||'Erro',true);
+  }catch(e){showToast('Erro',true)}
 }
 
 async function toggleUser(id,name,active){
