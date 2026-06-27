@@ -53,6 +53,14 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
 .status-banner i{font-size:16px;flex-shrink:0}
 .status-banner span{flex:1}
 .banner-btn{background:var(--green);color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer;text-decoration:none;white-space:nowrap;font-family:inherit}
+
+/* TRIAL PILL NO HERO */
+.trial-pill{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:999px;padding:6px 14px;font-size:13px;font-weight:500;color:#fff}
+.trial-pill.urgente{background:rgba(216,90,48,.25);border-color:rgba(216,90,48,.5)}
+.trial-pill i{font-size:14px}
+.trial-pill-dias{font-weight:700}
+.trial-pill a{color:rgba(255,255,255,.9);text-decoration:underline;cursor:pointer;margin-left:6px;font-size:12px}
+
 .logout-btn{background:rgba(255,255,255,.12);border:none;color:var(--green-mid);font-size:12px;padding:6px 10px;border-radius:8px;cursor:pointer}
 .stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:24px 16px 0;position:relative;z-index:1}
 .stat{background:var(--surface);border-radius:var(--radius-sm);padding:14px 16px;border:1px solid var(--border)}
@@ -225,8 +233,42 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
     <div class="hero-total-label">Total do mês</div>
     <div class="hero-total" id="total-val">R$ 0,00</div>
     <div class="hero-sub" id="hero-sub">Carregando...</div>
+    <!-- TRIAL PILL NO HERO -->
+    <div id="hero-trial" style="display:none;margin-top:12px">
+      <div id="hero-trial-inner"></div>
+    </div>
   </div>
   <div id="status-banner"></div>
+
+  <!-- MODAL BOAS-VINDAS TRIAL (primeiro login) -->
+  <div class="modal-overlay" id="trial-modal">
+    <div class="modal" style="text-align:center;padding:28px 24px 24px">
+      <div style="font-size:48px;margin-bottom:8px">🎉</div>
+      <div style="font-size:20px;font-weight:700;color:var(--text);margin-bottom:8px">Bem-vindo!</div>
+      <div style="font-size:14px;color:var(--text-2);line-height:1.6;margin-bottom:20px">
+        Você tem <strong id="trial-modal-dias">30 dias</strong> de acesso gratuito completo.<br>
+        Explore todas as funcionalidades sem compromisso.
+      </div>
+      <div style="background:var(--green-light);border-radius:var(--radius-sm);padding:14px;margin-bottom:20px;text-align:left">
+        <div style="font-size:13px;color:var(--green-dark);font-weight:600;margin-bottom:8px">O que você pode fazer:</div>
+        <div style="font-size:13px;color:var(--green-dark);display:flex;flex-direction:column;gap:6px">
+          <span><i class="ti ti-check" style="margin-right:6px"></i>Registrar despesas por voz</span>
+          <span><i class="ti ti-check" style="margin-right:6px"></i>Tirar fotos dos comprovantes</span>
+          <span><i class="ti ti-check" style="margin-right:6px"></i>Relatórios e exportação Excel</span>
+          <span><i class="ti ti-check" style="margin-right:6px"></i>Categorias personalizadas</span>
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="closeTrialModal()" style="margin-bottom:10px">
+        Começar a usar
+      </button>
+      <a href="/assinar" style="display:block;width:100%;height:50px;border-radius:var(--radius-sm);border:1px solid var(--green);background:none;color:var(--green);font-size:16px;font-weight:600;cursor:pointer;font-family:inherit;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:10px">
+        <i class="ti ti-crown" style="font-size:18px"></i> Assinar agora
+      </a>
+      <div style="font-size:12px;color:var(--text-3);margin-top:4px">
+        Planos a partir de <strong>R$ 49/ano</strong> após o trial
+      </div>
+    </div>
+  </div>
   <div class="stats">
     <div class="stat"><div class="stat-label">Lançamentos</div><div class="stat-value" id="count-val">—</div></div>
     <div class="stat"><div class="stat-label">Categorias</div><div class="stat-value" id="cats-val">—</div></div>
@@ -328,22 +370,72 @@ async function loadContaStatus(){
   try{
     contaStatus=await api('/api/conta/status');
     renderStatusBanner();
+    renderHeroTrial();
   }catch(e){}
+}
+
+function renderHeroTrial(){
+  const s=contaStatus;
+  const el=document.getElementById('hero-trial');
+  const inner=document.getElementById('hero-trial-inner');
+  if(!el||!inner)return;
+  if(s.status==='trial'){
+    const dias=s.trial_dias||0;
+    const urgente=dias<=7;
+    el.style.display='block';
+    inner.innerHTML=`<div class="trial-pill${urgente?' urgente':''}">
+      <i class="ti ${urgente?'ti-alert-triangle':'ti-clock'}"></i>
+      <span>Trial: <span class="trial-pill-dias">${dias} dia${dias===1?'':'s'}</span> restante${dias===1?'':'s'}</span>
+      <a href="/assinar">Assinar →</a>
+    </div>`;
+  } else if(s.status==='expirado'){
+    el.style.display='block';
+    inner.innerHTML=`<div class="trial-pill urgente">
+      <i class="ti ti-lock"></i>
+      <span>Trial expirado — somente leitura</span>
+      <a href="/assinar">Assinar →</a>
+    </div>`;
+  } else if(s.status==='ativo'){
+    const uso=s.uso_mes||0;const lim=s.limite;
+    el.style.display='block';
+    inner.innerHTML=`<div class="trial-pill">
+      <i class="ti ti-chart-donut"></i>
+      <span>${uso} de ${lim} lançamentos este mês</span>
+      ${uso/lim>=0.8?`<a href="/assinar">Upgrade →</a>`:''}
+    </div>`;
+  } else {
+    el.style.display='none';
+  }
 }
 
 function renderStatusBanner(){
   const b=document.getElementById('status-banner');
   if(!b||!contaStatus)return;
   const s=contaStatus;
-  if(s.status==='trial'){
-    b.innerHTML=`<div class="status-banner trial"><i class="ti ti-clock"></i><span>Trial: <strong>${s.trial_dias} dias restantes</strong></span><a href="/assinar" class="banner-btn">Assinar</a></div>`;
-  } else if(s.status==='expirado'){
-    b.innerHTML=`<div class="status-banner expirado"><i class="ti ti-alert-circle"></i><span>Trial expirado — somente leitura</span><a href="/assinar" class="banner-btn">Assinar agora</a></div>`;
+  if(s.status==='expirado'){
+    b.innerHTML=`<div class="status-banner expirado"><i class="ti ti-alert-circle"></i><span>Trial expirado — você pode ver seus lançamentos mas não adicionar novos</span><a href="/assinar" class="banner-btn">Assinar agora</a></div>`;
   } else if(s.status==='ativo'){
     const uso=s.uso_mes||0;const lim=s.limite;const pct=Math.round(uso/lim*100);
-    const cor=pct>=90?'red':pct>=70?'amber':'green';
-    b.innerHTML=`<div class="status-banner ativo-${cor}"><i class="ti ti-chart-donut"></i><span>${uso}/${lim} lançamentos este mês</span>${pct>=80?`<a href="/assinar" class="banner-btn">Upgrade</a>`:''}</div>`;
+    if(pct>=90){
+      b.innerHTML=`<div class="status-banner ativo-red"><i class="ti ti-alert-triangle"></i><span>${uso}/${lim} lançamentos este mês — limite quase atingido!</span><a href="/assinar" class="banner-btn">Upgrade</a></div>`;
+    } else if(pct>=70){
+      b.innerHTML=`<div class="status-banner ativo-amber"><i class="ti ti-info-circle"></i><span>${uso}/${lim} lançamentos este mês</span><a href="/assinar" class="banner-btn">Upgrade</a></div>`;
+    } else {
+      b.innerHTML='';
+    }
+  } else {
+    b.innerHTML='';
   }
+}
+
+// MODAL TRIAL (primeiro login)
+function showTrialModal(dias){
+  document.getElementById('trial-modal-dias').textContent=dias+' dias';
+  document.getElementById('trial-modal').classList.add('open');
+}
+function closeTrialModal(){
+  document.getElementById('trial-modal').classList.remove('open');
+  localStorage.setItem('trial_modal_shown','1');
 }
 
 async function doLogin(){
@@ -418,7 +510,13 @@ function showApp(){
   document.getElementById('app').style.display='block';
   document.getElementById('hero-user').textContent='Olá, '+userName;
   document.getElementById('month-label').textContent=new Date().toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
-  loadContaStatus().then(()=>loadCategorias().then(()=>loadEntries()));
+  loadContaStatus().then(()=>{
+    // Exibir modal de trial apenas no primeiro acesso
+    if(contaStatus&&contaStatus.status==='trial'&&!localStorage.getItem('trial_modal_shown')){
+      showTrialModal(contaStatus.trial_dias||30);
+    }
+    loadCategorias().then(()=>loadEntries());
+  });
 }
 
 async function addEntry(cat,val){
