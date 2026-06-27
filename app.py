@@ -58,6 +58,18 @@ def init_db():
             photo   TEXT,
             FOREIGN KEY(user_id) REFERENCES users(id)
         );
+        CREATE TABLE IF NOT EXISTS categorias (
+            id      INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            nome    TEXT NOT NULL,
+            icone   TEXT DEFAULT 'ti-tag',
+            cor_bg  TEXT DEFAULT '#F1EFE8',
+            cor_text TEXT DEFAULT '#2C2C2A',
+            cor_bar  TEXT DEFAULT '#888',
+            criada  TEXT DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(user_id, nome),
+            FOREIGN KEY(user_id) REFERENCES users(id)
+        );
     ''')
     db.commit()
     db.close()
@@ -221,6 +233,63 @@ def reset_password():
         return jsonify({'error': 'Código inválido ou expirado'}), 400
     db = get_db()
     db.execute('UPDATE users SET password=? WHERE phone=?', (hash_password(new_pw), phone))
+    db.commit()
+    return jsonify({'ok': True})
+
+# ── CATEGORIAS ───────────────────────────────────────────
+CATS_PADRAO = ['Combustível','Alimentação','Lazer','Saúde','Transporte','Moradia','Educação','Vestuário','Outros']
+
+@app.route('/api/categorias', methods=['GET'])
+@require_auth
+def get_categorias():
+    db   = get_db()
+    rows = db.execute(
+        'SELECT * FROM categorias WHERE user_id=? ORDER BY criada ASC', (g.user_id,)
+    ).fetchall()
+    custom = [dict(r) for r in rows]
+    return jsonify({'padrao': CATS_PADRAO, 'custom': custom})
+
+@app.route('/api/categorias', methods=['POST'])
+@require_auth
+def add_categoria():
+    d    = request.get_json()
+    nome = d.get('nome','').strip()
+    if not nome:
+        return jsonify({'error': 'Nome obrigatório'}), 400
+    if nome in CATS_PADRAO:
+        return jsonify({'error': 'Categoria já existe'}), 409
+    db = get_db()
+    try:
+        db.execute(
+            'INSERT INTO categorias (user_id,nome,icone,cor_bg,cor_text,cor_bar) VALUES (?,?,?,?,?,?)',
+            (g.user_id, nome,
+             d.get('icone','ti-tag'),
+             d.get('cor_bg','#F1EFE8'),
+             d.get('cor_text','#2C2C2A'),
+             d.get('cor_bar','#888')))
+        db.commit()
+        row = db.execute('SELECT last_insert_rowid() as id').fetchone()
+        return jsonify({'ok': True, 'id': row['id']})
+    except sqlite3.IntegrityError:
+        return jsonify({'error': 'Categoria já existe'}), 409
+
+@app.route('/api/categorias/<int:cid>', methods=['DELETE'])
+@require_auth
+def delete_categoria(cid):
+    db  = get_db()
+    row = db.execute(
+        'SELECT * FROM categorias WHERE id=? AND user_id=?', (cid, g.user_id)
+    ).fetchone()
+    if not row:
+        return jsonify({'error': 'Não encontrada'}), 404
+    # Verificar se tem despesas usando essa categoria
+    count = db.execute(
+        'SELECT COUNT(*) as c FROM despesas WHERE user_id=? AND cat=?',
+        (g.user_id, row['nome'])
+    ).fetchone()['c']
+    if count > 0:
+        return jsonify({'error': f'Categoria em uso em {count} lançamento(s). Remova-os primeiro.'}), 409
+    db.execute('DELETE FROM categorias WHERE id=?', (cid,))
     db.commit()
     return jsonify({'ok': True})
 
