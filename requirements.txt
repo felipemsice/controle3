@@ -3,3 +3,5 @@ gunicorn==22.0.0
 PyJWT==2.8.0
 twilio==9.3.2
 mercadopago==2.3.0
+supabase==2.5.3
+psycopg2-binary==2.9.9
