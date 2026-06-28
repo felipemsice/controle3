@@ -1277,6 +1277,7 @@ async function saveEdit(){
 }
 
 
+function parseVoice(text){
   const lower=text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
   const catMap={};Object.keys(CAT_META).forEach(c=>{catMap[c.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')]=c});
   let foundCat=null;for(const[k,v]of Object.entries(catMap)){if(lower.includes(k)){foundCat=v;break}}
