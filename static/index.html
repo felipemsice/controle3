@@ -131,7 +131,11 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
 .entry-amount{font-size:15px;font-weight:700;color:var(--cyan);white-space:nowrap}
 .photo-btn{width:36px;height:36px;border-radius:10px;border:1px solid var(--border2);background:var(--bg2);color:var(--text-3);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;position:relative;overflow:hidden}
 .photo-btn.has-photo{border-color:var(--cyan);background:rgba(0,212,255,.08);color:var(--cyan)}
+.photo-btn.has-obs{border-color:var(--amber);background:rgba(255,165,2,.08);color:var(--amber)}
+.photo-btn.has-photo.has-obs{border-color:var(--cyan);background:rgba(0,212,255,.08);color:var(--cyan)}
 .photo-btn img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:9px}
+.entry-obs{font-size:11px;color:var(--text-3);margin-top:3px;font-style:italic;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px}
+#modal-obs:focus{outline:none;border-color:var(--cyan);box-shadow:0 0 0 3px var(--cyan-glow)}
 .del-btn{width:36px;height:36px;border-radius:10px;background:none;border:none;cursor:pointer;color:var(--text-3);font-size:17px;display:flex;align-items:center;justify-content:center}
 .del-btn:active{color:var(--red);background:var(--red-light)}
 
@@ -421,13 +425,23 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
 
 <div class="modal-overlay" id="photo-modal">
   <div class="modal">
-    <div class="modal-title">Foto do comprovante</div>
+    <div class="modal-title">Comprovante & Observação</div>
+
+    <!-- FOTO -->
+    <div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Foto do comprovante</div>
     <div class="modal-preview" id="modal-preview"><div class="placeholder"><i class="ti ti-photo"></i>Nenhuma foto ainda</div></div>
-    <div class="modal-btns">
-      <button class="modal-btn" onclick="triggerCamera()"><i class="ti ti-camera" style="font-size:20px"></i> Câmera</button>
-      <button class="modal-btn" onclick="triggerGallery()"><i class="ti ti-photo" style="font-size:20px"></i> Galeria</button>
+    <div class="modal-btns" style="margin-bottom:12px">
+      <button class="modal-btn" onclick="triggerCamera()"><i class="ti ti-camera" style="font-size:18px"></i> Câmera</button>
+      <button class="modal-btn" onclick="triggerGallery()"><i class="ti ti-photo" style="font-size:18px"></i> Galeria</button>
     </div>
-    <button class="modal-btn primary" id="modal-save-btn" onclick="savePhoto()" style="width:100%;margin-bottom:8px"><i class="ti ti-check"></i> Salvar foto</button>
+
+    <!-- OBSERVAÇÃO -->
+    <div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Observação <span style="font-weight:400;text-transform:none;letter-spacing:0">(opcional)</span></div>
+    <textarea id="modal-obs" maxlength="300" placeholder="Adicione uma observação sobre este lançamento..." style="width:100%;height:80px;border:1px solid var(--border2);border-radius:var(--radius-sm);padding:10px 12px;font-size:14px;background:var(--bg2);color:var(--text);font-family:inherit;resize:none;line-height:1.5;-webkit-appearance:none;transition:border-color .15s;margin-bottom:4px" oninput="updateObsCount()"></textarea>
+    <div style="font-size:11px;color:var(--text-3);text-align:right;margin-bottom:12px"><span id="obs-count">0</span>/300</div>
+
+    <!-- BOTÕES -->
+    <button class="modal-btn primary" id="modal-save-btn" onclick="savePhotoObs()" style="width:100%;margin-bottom:8px"><i class="ti ti-check"></i> Salvar</button>
     <button class="modal-btn danger" id="modal-remove-btn" onclick="removePhoto()" style="width:100%;margin-bottom:8px;display:none"><i class="ti ti-trash"></i> Remover foto</button>
     <button class="modal-cancel" onclick="closeModal()">Cancelar</button>
   </div>
@@ -711,10 +725,17 @@ function render(){
   if(!entries.length){lc.innerHTML='<div class="entries-card"><div class="empty"><i class="ti ti-receipt-off"></i>Nenhum lançamento ainda</div></div>';return}
   lc.innerHTML='<div class="entries-card">'+entries.map(e=>{
     const m=CAT_META[e.cat]||CAT_META['Outros'];
-    // photo_inline = base64 direto; photo = referência (só válida se não começa com db:)
     const imgSrc=e.photo_inline||(e.photo&&!e.photo.startsWith('db:')?`/api/photo/${e.photo}`:null);
-    const hp=!!imgSrc;
-    return`<div class="entry"><div class="entry-icon" style="background:${m.bg}"><i class="ti ${m.icon}" style="color:${m.color}"></i></div><div class="entry-body"><div class="entry-cat">${e.cat}</div><div class="entry-dt"><span><i class="ti ti-calendar" style="font-size:11px;vertical-align:-1px"></i> ${e.date}</span><span><i class="ti ti-clock" style="font-size:11px;vertical-align:-1px"></i> ${e.time}</span></div></div><div class="entry-actions"><span class="entry-amount">${fmtR(e.val)}</span><button class="photo-btn${hp?' has-photo':''}" onclick="openModal(${e.id})">${hp?`<img src="${imgSrc}" alt="">`:'<i class="ti ti-camera-plus"></i>'}</button><button class="del-btn" onclick="deleteEntry(${e.id})"><i class="ti ti-trash"></i></button></div></div>`;
+    const hasPhoto=!!imgSrc;
+    const hasObs=!!(e.obs&&e.obs.trim());
+    let btnClass='photo-btn'+(hasPhoto?' has-photo':hasObs?' has-obs':'');
+    let btnContent=hasPhoto
+      ?`<img src="${imgSrc}" alt="">`
+      :hasObs
+        ?`<i class="ti ti-message-circle" style="font-size:15px"></i>`
+        :`<i class="ti ti-camera-plus"></i>`;
+    const obsLine=hasObs?`<div class="entry-obs">"${e.obs}"</div>`:'';
+    return`<div class="entry"><div class="entry-icon" style="background:${m.bg}"><i class="ti ${m.icon}" style="color:${m.color}"></i></div><div class="entry-body"><div class="entry-cat">${e.cat}</div><div class="entry-dt"><span><i class="ti ti-calendar" style="font-size:11px;vertical-align:-1px"></i> ${e.date}</span><span><i class="ti ti-clock" style="font-size:11px;vertical-align:-1px"></i> ${e.time}</span></div>${obsLine}</div><div class="entry-actions"><span class="entry-amount">${fmtR(e.val)}</span><button class="${btnClass}" onclick="openModal(${e.id})">${btnContent}</button><button class="del-btn" onclick="deleteEntry(${e.id})"><i class="ti ti-trash"></i></button></div></div>`;
   }).join('')+'</div>';
   const ct={};entries.forEach(e=>{ct[e.cat]=(ct[e.cat]||0)+e.val});
   const sorted=Object.entries(ct).sort((a,b)=>b[1]-a[1]);
@@ -730,14 +751,29 @@ function openModal(eid){
   const prev=document.getElementById('modal-preview');
   const rb=document.getElementById('modal-remove-btn'),sb=document.getElementById('modal-save-btn');
   const imgSrc=e&&(e.photo_inline||(e.photo&&!e.photo.startsWith('db:')?`/api/photo/${e.photo}`:null));
+
+  // Foto
   if(imgSrc){
     prev.innerHTML=`<img src="${imgSrc}" onclick="openViewer('${imgSrc}')" style="cursor:zoom-in">`;
-    rb.style.display='';sb.style.display='none';
+    rb.style.display='';sb.style.display='';
   }else{
     prev.innerHTML='<div class="placeholder"><i class="ti ti-photo"></i>Nenhuma foto ainda</div>';
     rb.style.display='none';sb.style.display='';
   }
+
+  // Observação
+  const obsEl=document.getElementById('modal-obs');
+  obsEl.value=e&&e.obs?e.obs:'';
+  updateObsCount();
+
   document.getElementById('photo-modal').classList.add('open');
+}
+
+function updateObsCount(){
+  const v=document.getElementById('modal-obs').value.length;
+  const el=document.getElementById('obs-count');
+  el.textContent=v;
+  el.style.color=v>250?'var(--amber)':v>=300?'var(--red)':'var(--text-3)';
 }
 function closeModal(){document.getElementById('photo-modal').classList.remove('open')}
 function triggerCamera(){document.getElementById('input-camera').click()}
@@ -748,25 +784,33 @@ function handleFile(input){
   reader.onload=ev=>{pendingPhotoBase64=ev.target.result;document.getElementById('modal-preview').innerHTML=`<img src="${pendingPhotoBase64}">`;document.getElementById('modal-save-btn').style.display='';document.getElementById('modal-remove-btn').style.display='none'};
   reader.readAsDataURL(file);
 }
-async function savePhoto(){
-  if(!pendingPhotoBase64||!currentPhotoEntryId)return;
-  // Verificar permissão de fotos
-  if(contaStatus&&!contaStatus.fotos){
-    closeModal();
-    showUpgradeAlert('fotos','Fotos de comprovantes','standard');
-    return;
+async function savePhotoObs(){
+  if(!currentPhotoEntryId)return;
+  const obs=document.getElementById('modal-obs').value.trim().slice(0,300);
+
+  // Verificar permissão de fotos se tiver foto nova
+  if(pendingPhotoBase64&&contaStatus&&!contaStatus.fotos){
+    closeModal();showUpgradeAlert('fotos','Fotos de comprovantes','standard');return;
   }
+
   try{
-    const d=await api('/api/photo',{method:'POST',body:JSON.stringify({id:currentPhotoEntryId,image:pendingPhotoBase64})});
-    if(d.error==='sem_permissao'){
-      closeModal();showUpgradeAlert('fotos','Fotos de comprovantes','standard');return;
+    // Salvar foto se houver nova
+    if(pendingPhotoBase64){
+      const d=await api('/api/photo',{method:'POST',body:JSON.stringify({id:currentPhotoEntryId,image:pendingPhotoBase64})});
+      if(d.error==='sem_permissao'){closeModal();showUpgradeAlert('fotos','Fotos de comprovantes','standard');return}
+      if(d.ok){
+        const e=entries.find(x=>x.id===currentPhotoEntryId);
+        if(e){e.photo=d.photo;e.photo_inline=pendingPhotoBase64;}
+      }
     }
-    if(d.ok){
+    // Salvar observação
+    const d2=await api('/api/obs',{method:'POST',body:JSON.stringify({id:currentPhotoEntryId,obs})});
+    if(d2.ok){
       const e=entries.find(x=>x.id===currentPhotoEntryId);
-      if(e){e.photo=d.photo;e.photo_inline=pendingPhotoBase64;}
-      showToast('Foto salva!');closeModal();render();
+      if(e)e.obs=obs||null;
     }
-  }catch(e){showToast('Erro ao salvar foto',true)}
+    showToast('Salvo!');closeModal();render();
+  }catch(e){showToast('Erro ao salvar',true)}
 }
 async function removePhoto(){
   try{
