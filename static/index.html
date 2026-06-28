@@ -829,10 +829,19 @@ function rebuildCatSelect(){
   const prev=sel.value;
   sel.innerHTML='<option value="">Categoria</option>';
   const PADRAO=['Combustível','Alimentação','Lazer','Saúde','Transporte','Moradia','Educação','Vestuário','Outros'];
-  PADRAO.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;sel.appendChild(o)});
+
+  // Grupo padrão
+  const grpPadrao=document.createElement('optgroup');
+  grpPadrao.label='Padrão';
+  PADRAO.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;grpPadrao.appendChild(o)});
+  sel.appendChild(grpPadrao);
+
+  // Grupo personalizado
   if(customCats.length){
-    const sep=document.createElement('option');sep.disabled=true;sep.textContent='── Personalizadas ──';sel.appendChild(sep);
-    customCats.forEach(c=>{const o=document.createElement('option');o.value=c.nome;o.textContent=c.nome;sel.appendChild(o)});
+    const grpCustom=document.createElement('optgroup');
+    grpCustom.label='Personalizadas';
+    customCats.forEach(c=>{const o=document.createElement('option');o.value=c.nome;o.textContent=c.nome;grpCustom.appendChild(o)});
+    sel.appendChild(grpCustom);
   }
   if(prev)sel.value=prev;
 }
