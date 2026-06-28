@@ -11,7 +11,7 @@ app = Flask(__name__, static_folder='static')
 
 # ── CONFIG ───────────────────────────────────────────────
 SECRET_KEY      = os.environ.get('SECRET_KEY', 'dev-secret')
-ADM_PHONE       = os.environ.get('ADM_PHONE', '')
+ADM_EMAIL       = os.environ.get('ADM_EMAIL', 'felipep_s@yahoo.com.br')
 ADM_PASSWORD    = os.environ.get('ADM_PASSWORD', 'Admin@2025!')
 MP_ACCESS_TOKEN = os.environ.get('MP_ACCESS_TOKEN', '')
 APP_URL         = os.environ.get('APP_URL', 'https://controle3.onrender.com')
@@ -46,10 +46,9 @@ def get_sb() -> SupabaseClient:
 def hash_password(pw):
     return hashlib.sha256(pw.encode()).hexdigest()
 
-def fmt_phone(phone):
-    phone = phone.strip().replace(' ','').replace('-','').replace('(','').replace(')','')
-    if not phone.startswith('+'): phone = '+55' + phone.lstrip('0')
-    return phone
+def make_token(user_id, role='user'):
+    payload = {'sub': user_id, 'role': role, 'exp': datetime.utcnow() + timedelta(days=30)}
+    return jwt.encode(payload, SECRET_KEY, algorithm='HS256')
 
 def twilio_client():
     return Client(TWILIO_SID, TWILIO_TOKEN)
@@ -139,7 +138,7 @@ def make_token(user_id, role='user'):
     return jwt.encode(payload, SECRET_KEY, algorithm='HS256')
 
 def get_plano_status(user):
-    if str(user.get('phone','')) == ADM_PHONE:
+    if str(user.get('email','')) == ADM_EMAIL:
         return {'status': 'adm', 'pode_adicionar': True, 'limite': 9999, 'uso_mes': 0,
                 'fotos': True, 'relatorios': True, 'categorias_custom': True}
 
@@ -240,30 +239,30 @@ def assinar_page():
 def register():
     d     = request.get_json()
     name  = d.get('name','').strip()
-    phone = fmt_phone(d.get('phone',''))
     email = d.get('email','').strip().lower()
     pw    = d.get('password','')
-    if not name or not phone or not pw or not email:
+    if not name or not email or not pw:
         return jsonify({'error': 'Preencha todos os campos'}), 400
+    if '@' not in email:
+        return jsonify({'error': 'Email inválido'}), 400
     if len(pw) < 6:
         return jsonify({'error': 'Senha mínimo 6 caracteres'}), 400
     sb = get_sb()
-    existing = sb.table('users').select('id,verified').eq('phone', phone).execute()
+    existing = sb.table('users').select('id,verified').eq('email', email).execute()
     if existing.data:
         user = existing.data[0]
         if user['verified']:
-            return jsonify({'error': 'Telefone já cadastrado'}), 409
-        # Reenviar código
+            return jsonify({'error': 'Email já cadastrado'}), 409
         codigo = gerar_codigo()
         exp    = (datetime.utcnow() + timedelta(minutes=15)).isoformat()
-        sb.table('users').update({'verify_code': codigo, 'verify_exp': exp, 'email': email}).eq('id', user['id']).execute()
+        sb.table('users').update({'verify_code': codigo, 'verify_exp': exp, 'name': name}).eq('id', user['id']).execute()
         email_verificacao(email, name, codigo)
-        return jsonify({'ok': True, 'message': 'Código reenviado por email'})
+        return jsonify({'ok': True, 'message': 'Código reenviado'})
     trial_end = (datetime.utcnow() + timedelta(days=30)).isoformat()
     codigo    = gerar_codigo()
     exp       = (datetime.utcnow() + timedelta(minutes=15)).isoformat()
     res = sb.table('users').insert({
-        'name': name, 'phone': phone, 'email': email,
+        'name': name, 'email': email,
         'password': hash_password(pw),
         'trial_end': trial_end, 'verified': False, 'active': True,
         'verify_code': codigo, 'verify_exp': exp
@@ -272,41 +271,39 @@ def register():
     return jsonify({'ok': True, 'message': 'Código enviado por email'})
 
 @app.route('/api/auth/verify', methods=['POST'])
-def verify_phone():
+def verify_email():
     d      = request.get_json()
-    phone  = fmt_phone(d.get('phone',''))
+    email  = d.get('email','').strip().lower()
     codigo = d.get('code','').strip()
     sb     = get_sb()
-    res    = sb.table('users').select('*').eq('phone', phone).execute()
-    if not res.data: return jsonify({'error': 'Usuário não encontrado'}), 404
+    res    = sb.table('users').select('*').eq('email', email).execute()
+    if not res.data: return jsonify({'error': 'Email não encontrado'}), 404
     user = res.data[0]
     now  = datetime.utcnow().isoformat()
     if user.get('verify_code') != codigo:
         return jsonify({'error': 'Código incorreto'}), 400
     if user.get('verify_exp') and now > user['verify_exp']:
-        return jsonify({'error': 'Código expirado. Faça novo cadastro.'}), 400
+        return jsonify({'error': 'Código expirado. Solicite novo cadastro.'}), 400
     sb.table('users').update({'verified': True, 'verify_code': None, 'verify_exp': None}).eq('id', user['id']).execute()
     return jsonify({'ok': True, 'token': make_token(user['id']), 'name': user['name']})
 
 @app.route('/api/auth/login', methods=['POST'])
 def login():
     d     = request.get_json()
-    phone = fmt_phone(d.get('phone',''))
+    email = d.get('email','').strip().lower()
     pw    = d.get('password','')
     sb    = get_sb()
-    res   = sb.table('users').select('*').eq('phone', phone).execute()
-    if not res.data: return jsonify({'error': 'Telefone ou senha incorretos'}), 401
+    res   = sb.table('users').select('*').eq('email', email).execute()
+    if not res.data: return jsonify({'error': 'Email ou senha incorretos'}), 401
     user = res.data[0]
     if user['password'] != hash_password(pw):
-        return jsonify({'error': 'Telefone ou senha incorretos'}), 401
+        return jsonify({'error': 'Email ou senha incorretos'}), 401
     if not user.get('verified'):
-        # Reenviar código se tiver email
-        if user.get('email'):
-            codigo = gerar_codigo()
-            exp    = (datetime.utcnow() + timedelta(minutes=15)).isoformat()
-            sb.table('users').update({'verify_code': codigo, 'verify_exp': exp}).eq('id', user['id']).execute()
-            email_verificacao(user['email'], user['name'], codigo)
-        return jsonify({'error': 'Verifique seu email', 'unverified': True}), 403
+        codigo = gerar_codigo()
+        exp    = (datetime.utcnow() + timedelta(minutes=15)).isoformat()
+        sb.table('users').update({'verify_code': codigo, 'verify_exp': exp}).eq('id', user['id']).execute()
+        email_verificacao(email, user['name'], codigo)
+        return jsonify({'error': 'Verifique seu email', 'unverified': True, 'email': email}), 403
     if not user.get('active', True):
         return jsonify({'error': 'Conta desativada'}), 403
     return jsonify({'ok': True, 'token': make_token(user['id']), 'name': user['name']})
@@ -314,28 +311,27 @@ def login():
 @app.route('/api/auth/forgot', methods=['POST'])
 def forgot():
     d     = request.get_json()
-    phone = fmt_phone(d.get('phone',''))
+    email = d.get('email','').strip().lower()
     sb    = get_sb()
-    res   = sb.table('users').select('*').eq('phone', phone).execute()
-    if not res.data: return jsonify({'ok': True})  # Não revelar se existe
+    res   = sb.table('users').select('*').eq('email', email).execute()
+    if not res.data: return jsonify({'ok': True})
     user   = res.data[0]
-    if not user.get('email'): return jsonify({'error': 'Sem email cadastrado'}), 400
     codigo = gerar_codigo()
     exp    = (datetime.utcnow() + timedelta(minutes=15)).isoformat()
     sb.table('users').update({'verify_code': codigo, 'verify_exp': exp}).eq('id', user['id']).execute()
-    email_reset_senha(user['email'], user['name'], codigo)
+    email_reset_senha(email, user['name'], codigo)
     return jsonify({'ok': True})
 
 @app.route('/api/auth/reset', methods=['POST'])
 def reset_password():
     d      = request.get_json()
-    phone  = fmt_phone(d.get('phone',''))
+    email  = d.get('email','').strip().lower()
     codigo = d.get('code','').strip()
     new_pw = d.get('password','')
     if len(new_pw) < 6: return jsonify({'error': 'Senha mínimo 6 caracteres'}), 400
     sb  = get_sb()
-    res = sb.table('users').select('*').eq('phone', phone).execute()
-    if not res.data: return jsonify({'error': 'Usuário não encontrado'}), 404
+    res = sb.table('users').select('*').eq('email', email).execute()
+    if not res.data: return jsonify({'error': 'Email não encontrado'}), 404
     user = res.data[0]
     now  = datetime.utcnow().isoformat()
     if user.get('verify_code') != codigo:
@@ -772,7 +768,7 @@ def confirmar_pagamento():
 @app.route('/api/adm/login', methods=['POST'])
 def adm_login():
     d = request.get_json()
-    if d.get('phone','').strip() == ADM_PHONE and d.get('password') == ADM_PASSWORD:
+    if d.get('email','').strip().lower() == ADM_EMAIL and d.get('password') == ADM_PASSWORD:
         return jsonify({'ok': True, 'token': make_token('adm', role='adm')})
     return jsonify({'error': 'Credenciais incorretas'}), 401
 
@@ -780,7 +776,7 @@ def adm_login():
 @require_adm
 def adm_users():
     sb   = get_sb()
-    rows = sb.table('users').select('id,name,phone,verified,active,trial_end,plano,plano_end,created_at').order('created_at', desc=True).execute()
+    rows = sb.table('users').select('id,name,email,verified,active,trial_end,plano,plano_end,created_at').order('created_at', desc=True).execute()
     result = []
     for u in rows.data:
         count = sb.table('despesas').select('id', count='exact').eq('user_id', u['id']).execute()
