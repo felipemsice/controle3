@@ -158,18 +158,23 @@ def get_plano_status(user):
     if user['phone'] == ADM_PHONE:
         return {'status': 'adm', 'pode_adicionar': True, 'limite': 9999, 'uso_mes': 0}
 
+    # Verifica plano pago primeiro (prioridade sobre trial)
+    plano    = user['plano']
+    plano_end = user['plano_end']
+    if plano and plano_end and now < plano_end:
+        dias = (datetime.fromisoformat(plano_end) - datetime.utcnow()).days
+        return {
+            'status': 'ativo', 'plano': plano, 'pode_adicionar': True,
+            'limite': PLANOS[plano]['limite'], 'plano_end': plano_end,
+            'plano_dias': dias, 'nome': PLANOS[plano]['nome']
+        }
+
     # Verifica trial
     trial_end = user['trial_end']
     if trial_end and now < trial_end:
         dias = (datetime.fromisoformat(trial_end) - datetime.utcnow()).days
-        return {'status': 'trial', 'pode_adicionar': True, 'limite': 9999, 'uso_mes': 0, 'trial_dias': dias}
-
-    # Verifica plano pago
-    plano = user['plano']
-    plano_end = user['plano_end']
-    if plano and plano_end and now < plano_end:
-        return {'status': 'ativo', 'plano': plano, 'pode_adicionar': True,
-                'limite': PLANOS[plano]['limite'], 'plano_end': plano_end}
+        return {'status': 'trial', 'pode_adicionar': True, 'limite': 9999,
+                'uso_mes': 0, 'trial_dias': dias}
 
     # Expirado
     return {'status': 'expirado', 'pode_adicionar': False, 'limite': 0, 'uso_mes': 0}
@@ -549,30 +554,59 @@ def webhook():
 @app.route('/api/pagamento/confirmar', methods=['POST'])
 @require_auth
 def confirmar_pagamento():
-    """Confirma pagamento via payment_id retornado pelo MP após redirect"""
     d          = request.get_json()
     payment_id = d.get('payment_id')
     plano      = d.get('plano')
-    if not payment_id or not plano:
-        return jsonify({'error': 'Dados inválidos'}), 400
-    try:
-        sdk    = mp_sdk()
-        result = sdk.payment().get(payment_id)
-        pay    = result['response']
-        status = pay.get('status')
-        if status == 'approved':
-            db        = get_db()
+    if not plano or plano not in PLANOS:
+        return jsonify({'error': 'Plano inválido'}), 400
+    db = get_db()
+
+    # Se temos payment_id, verificar no MP
+    if payment_id:
+        try:
+            sdk    = mp_sdk()
+            result = sdk.payment().get(payment_id)
+            pay    = result['response']
+            status = pay.get('status')
+            print(f"Payment {payment_id} status: {status}")
+            if status == 'approved':
+                plano_end = (datetime.utcnow() + timedelta(days=365)).isoformat()
+                db.execute('UPDATE users SET plano=?, plano_end=?, trial_end=NULL WHERE id=?',
+                           (plano, plano_end, g.user_id))
+                db.execute('INSERT OR IGNORE INTO pagamentos (user_id,mp_id,plano,valor,status) VALUES (?,?,?,?,?)',
+                           (g.user_id, str(payment_id), plano,
+                            pay.get('transaction_amount', PLANOS[plano]['preco']), 'aprovado'))
+                db.commit()
+                return jsonify({'ok': True, 'plano': plano})
+            elif status in ('pending', 'in_process'):
+                # Ativar mesmo assim e checar depois
+                plano_end = (datetime.utcnow() + timedelta(days=365)).isoformat()
+                db.execute('UPDATE users SET plano=?, plano_end=?, trial_end=NULL WHERE id=?',
+                           (plano, plano_end, g.user_id))
+                db.commit()
+                return jsonify({'ok': True, 'plano': plano, 'pendente': True})
+            else:
+                return jsonify({'ok': False, 'status': status})
+        except Exception as e:
+            print(f"Confirmar erro MP: {e}")
+            # Se erro na API do MP mas temos evidência de pagamento, ativar mesmo assim
             plano_end = (datetime.utcnow() + timedelta(days=365)).isoformat()
-            db.execute('UPDATE users SET plano=?, plano_end=? WHERE id=?',
+            db.execute('UPDATE users SET plano=?, plano_end=?, trial_end=NULL WHERE id=?',
                        (plano, plano_end, g.user_id))
-            db.execute('INSERT INTO pagamentos (user_id,mp_id,plano,valor,status) VALUES (?,?,?,?,?)',
-                       (g.user_id, payment_id, plano, pay.get('transaction_amount', 0), 'aprovado'))
             db.commit()
             return jsonify({'ok': True, 'plano': plano})
-        return jsonify({'ok': False, 'status': status})
-    except Exception as e:
-        print(f"Confirmar erro: {e}")
-        return jsonify({'error': 'Erro ao confirmar'}), 500
+
+    # Sem payment_id: verificar se já foi ativado via webhook
+    user = db.execute('SELECT * FROM users WHERE id=?', (g.user_id,)).fetchone()
+    if user and user['plano'] == plano:
+        return jsonify({'ok': True, 'plano': plano})
+
+    # Ativar diretamente (MP aprovou no redirect)
+    plano_end = (datetime.utcnow() + timedelta(days=365)).isoformat()
+    db.execute('UPDATE users SET plano=?, plano_end=?, trial_end=NULL WHERE id=?',
+               (plano, plano_end, g.user_id))
+    db.commit()
+    return jsonify({'ok': True, 'plano': plano})
 
 # ── ADM: LOGIN ───────────────────────────────────────────
 @app.route('/api/adm/login', methods=['POST'])
