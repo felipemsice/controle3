@@ -51,7 +51,10 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
 .plano-items li{font-size:13px;color:var(--text-2);display:flex;align-items:center;gap:8px}
 .plano-items li i.ti-check{color:var(--cyan);font-size:14px;flex-shrink:0}
 .plano-items li i.ti-x{color:var(--text-3);font-size:14px;flex-shrink:0}
-.plano-items li.disabled{opacity:.4}
+.plano-items li.disabled{opacity:.5}
+.plano-items li.locked{opacity:1;cursor:pointer;transition:opacity .15s}
+.plano-items li.locked:hover{opacity:.8}
+.plano-items li.locked .lock-badge{font-size:9px;font-weight:700;background:rgba(0,212,255,.12);color:var(--cyan);border:1px solid var(--border);padding:2px 6px;border-radius:999px;margin-left:6px;white-space:nowrap;letter-spacing:.04em}
 
 /* PAGAMENTO */
 .pay-section{padding:16px 16px 0}
@@ -115,6 +118,7 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
     <div class="section">
       <div class="section-title">Escolha seu plano anual</div>
 
+      <!-- BÁSICO -->
       <div class="plano-card" id="card-basico" onclick="selectPlano('basico')">
         <div class="plano-top">
           <div style="display:flex;align-items:center">
@@ -130,13 +134,25 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
         <ul class="plano-items">
           <li><i class="ti ti-check"></i>Até 50 lançamentos por mês</li>
           <li><i class="ti ti-check"></i>Entrada por voz</li>
-          <li><i class="ti ti-check"></i>Categorias padrão</li>
-          <li class="disabled"><i class="ti ti-x"></i>Sem fotos de comprovantes</li>
-          <li class="disabled"><i class="ti ti-x"></i>Sem relatórios e Excel</li>
-          <li class="disabled"><i class="ti ti-x"></i>Sem categorias personalizadas</li>
+          <li class="locked" onclick="event.stopPropagation();showUpgradeInfo('fotos','standard')">
+            <i class="ti ti-camera" style="color:var(--text-3)"></i>
+            Fotos de comprovantes
+            <span class="lock-badge">Standard+</span>
+          </li>
+          <li class="locked" onclick="event.stopPropagation();showUpgradeInfo('relatorios','standard')">
+            <i class="ti ti-chart-bar" style="color:var(--text-3)"></i>
+            Relatórios e exportação Excel
+            <span class="lock-badge">Standard+</span>
+          </li>
+          <li class="locked" onclick="event.stopPropagation();showUpgradeInfo('categorias','premium')">
+            <i class="ti ti-tag" style="color:var(--text-3)"></i>
+            Categorias personalizadas
+            <span class="lock-badge">Premium</span>
+          </li>
         </ul>
       </div>
 
+      <!-- STANDARD -->
       <div class="plano-card popular" id="card-standard" onclick="selectPlano('standard')">
         <div class="plano-top">
           <div style="display:flex;align-items:center">
@@ -152,13 +168,17 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
         <ul class="plano-items">
           <li><i class="ti ti-check"></i>Até 150 lançamentos por mês</li>
           <li><i class="ti ti-check"></i>Entrada por voz</li>
-          <li><i class="ti ti-check"></i>Fotos de comprovantes</li>
-          <li><i class="ti ti-check"></i>Relatórios com filtros e exportação Excel</li>
-          <li><i class="ti ti-check"></i>Categorias padrão</li>
-          <li class="disabled"><i class="ti ti-x"></i>Sem categorias personalizadas</li>
+          <li><i class="ti ti-check"></i><strong style="color:var(--cyan)">Fotos de comprovantes</strong></li>
+          <li><i class="ti ti-check"></i><strong style="color:var(--cyan)">Relatórios e exportação Excel</strong></li>
+          <li class="locked" onclick="event.stopPropagation();showUpgradeInfo('categorias','premium')">
+            <i class="ti ti-tag" style="color:var(--text-3)"></i>
+            Categorias personalizadas
+            <span class="lock-badge">Premium</span>
+          </li>
         </ul>
       </div>
 
+      <!-- PREMIUM -->
       <div class="plano-card" id="card-premium" onclick="selectPlano('premium')">
         <div class="plano-top">
           <div style="display:flex;align-items:center">
@@ -175,12 +195,12 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
           </div>
         </div>
         <ul class="plano-items">
-          <li><i class="ti ti-check"></i><strong>Lançamentos ilimitados</strong></li>
+          <li><i class="ti ti-check"></i><strong style="color:var(--cyan)">Lançamentos ilimitados</strong></li>
           <li><i class="ti ti-check"></i>Entrada por voz</li>
           <li><i class="ti ti-check"></i>Fotos de comprovantes</li>
           <li><i class="ti ti-check"></i>Relatórios completos e exportação Excel</li>
-          <li><i class="ti ti-check"></i>Categorias personalizadas ilimitadas</li>
-          <li><i class="ti ti-check"></i>Suporte prioritário via WhatsApp</li>
+          <li><i class="ti ti-check"></i><strong style="color:var(--cyan)">Categorias personalizadas</strong></li>
+          <li><i class="ti ti-check"></i><strong style="color:var(--cyan)">Suporte prioritário via WhatsApp</strong></li>
         </ul>
       </div>
     </div>
@@ -210,6 +230,20 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
 
 </div>
 
+<!-- MODAL UPGRADE INFO -->
+<div id="upgrade-info-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)">
+  <div style="background:var(--surface2);border:1px solid var(--border);border-radius:16px;padding:24px;max-width:340px;width:100%;text-align:center">
+    <div id="ui-icon" style="font-size:40px;margin-bottom:12px"></div>
+    <div id="ui-titulo" style="font-size:17px;font-weight:700;color:var(--text);margin-bottom:8px"></div>
+    <div id="ui-desc" style="font-size:13px;color:var(--text-2);line-height:1.6;margin-bottom:20px"></div>
+    <div id="ui-plano-badge" style="display:inline-block;background:rgba(0,212,255,.1);color:var(--cyan);border:1px solid var(--border);font-size:12px;font-weight:700;padding:6px 16px;border-radius:999px;margin-bottom:20px"></div>
+    <button onclick="selecionarUpgrade()" style="width:100%;height:48px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--cyan),var(--cyan-dark));color:#000;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:10px">
+      <i class="ti ti-crown" style="font-size:15px;vertical-align:-2px;margin-right:6px"></i> Selecionar este plano
+    </button>
+    <button onclick="closeUpgradeInfo()" style="width:100%;height:40px;border-radius:10px;border:1px solid var(--border2);background:none;color:var(--text-3);font-size:14px;cursor:pointer;font-family:inherit">Fechar</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -236,13 +270,13 @@ async function loadStatus(){
     const d=await r.json();
     const b=document.getElementById('status-banner');
     if(d.status==='trial'){
-      b.innerHTML=`<div class="banner trial"><i class="ti ti-clock"></i><span>Você está no período trial — <strong>${d.trial_dias} dias restantes</strong>. Assine antes de expirar!</span></div>`;
+      b.innerHTML=`<div class="banner trial"><i class="ti ti-clock"></i><span>Trial ativo - <strong>${d.trial_dias} dias restantes</strong>. Assine antes de expirar!</span></div>`;
     }else if(d.status==='expirado'){
-      b.innerHTML=`<div class="banner expirado"><i class="ti ti-alert-circle"></i><span>Seu trial <strong>expirou</strong>. Assine para continuar adicionando lançamentos.</span></div>`;
+      b.innerHTML=`<div class="banner expirado"><i class="ti ti-alert-circle"></i><span>Trial expirado - assine para continuar.</span></div>`;
     }else if(d.status==='ativo'){
       const planos={basico:'Básico',standard:'Standard',premium:'Premium'};
       const end=new Date(d.plano_end).toLocaleDateString('pt-BR');
-      b.innerHTML=`<div class="banner ativo"><i class="ti ti-circle-check"></i><span>Plano <strong>${planos[d.plano]}</strong> ativo até ${end}. Você pode fazer upgrade abaixo.</span></div>`;
+      b.innerHTML=`<div class="banner ativo"><i class="ti ti-circle-check"></i><span>Plano <strong>${planos[d.plano]}</strong> ativo até ${end}.</span></div>`;
     }
   }catch(e){}
 }
@@ -288,6 +322,31 @@ async function verificarRetorno(){
     showToast('Pagamento não aprovado. Tente novamente.',true);
   }
 }
+
+let upgradeTargetPlano=null;
+const upgradeInfos={
+  fotos:{icon:'📷',titulo:'Fotos de comprovantes',desc:'Tire foto direto pela câmera ou galeria e anexe ao lançamento. Nunca perca um comprovante.',plano:'standard',badge:'Disponível no plano Standard'},
+  relatorios:{icon:'📊',titulo:'Relatórios e exportação Excel',desc:'Visualize seus gastos por categoria e mês, com filtros avançados e exportação para planilha Excel.',plano:'standard',badge:'Disponível no plano Standard'},
+  categorias:{icon:'🏷️',titulo:'Categorias personalizadas',desc:'Crie suas próprias categorias com cores e ícones personalizados para organizar exatamente do seu jeito.',plano:'premium',badge:'Disponível no plano Premium'},
+};
+
+function showUpgradeInfo(recurso,plano){
+  const info=upgradeInfos[recurso];
+  if(!info)return;
+  upgradeTargetPlano=info.plano;
+  document.getElementById('ui-icon').textContent=info.icon;
+  document.getElementById('ui-titulo').textContent=info.titulo;
+  document.getElementById('ui-desc').textContent=info.desc;
+  document.getElementById('ui-plano-badge').textContent=info.badge;
+  document.getElementById('upgrade-info-modal').style.display='flex';
+}
+function closeUpgradeInfo(){document.getElementById('upgrade-info-modal').style.display='none'}
+function selecionarUpgrade(){
+  closeUpgradeInfo();
+  if(upgradeTargetPlano)selectPlano(upgradeTargetPlano);
+  document.getElementById('card-'+upgradeTargetPlano).scrollIntoView({behavior:'smooth',block:'center'});
+}
+document.getElementById('upgrade-info-modal').addEventListener('click',function(e){if(e.target===this)closeUpgradeInfo()});
 
 selectPlano('standard');
 loadStatus();
