@@ -331,10 +331,12 @@ def add_despesa():
         if uso >= ps['limite']:
             return jsonify({'error': 'limite_atingido', 'uso': uso, 'limite': ps['limite']}), 403
     d   = request.get_json()
+    obs = (d.get('obs') or '').strip()[:300]
     ins = sb.table('despesas').insert({
         'user_id': g.user_id,
         'cat': d['cat'], 'val': d['val'],
-        'date': d.get('date'), 'time': d.get('time'), 'ts': d.get('ts')
+        'date': d.get('date'), 'time': d.get('time'), 'ts': d.get('ts'),
+        'obs': obs if obs else None
     }).execute()
     return jsonify({'ok': True, 'id': ins.data[0]['id']})
 
@@ -362,6 +364,19 @@ def clear_despesas():
         try: sb.storage.from_('recibos').remove(paths)
         except: pass
     sb.table('despesas').delete().eq('user_id', g.user_id).execute()
+    return jsonify({'ok': True})
+
+# ── OBSERVAÇÃO ───────────────────────────────────────────
+@app.route('/api/obs', methods=['POST'])
+@require_auth
+def save_obs():
+    d   = request.get_json()
+    eid = d.get('id')
+    obs = (d.get('obs') or '').strip()[:300]
+    sb  = get_sb()
+    row = sb.table('despesas').select('id').eq('id', eid).eq('user_id', g.user_id).execute()
+    if not row.data: return jsonify({'error': 'Não encontrado'}), 404
+    sb.table('despesas').update({'obs': obs if obs else None}).eq('id', eid).execute()
     return jsonify({'ok': True})
 
 # ── FOTOS (Supabase Storage) ──────────────────────────────
