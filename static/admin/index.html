@@ -6,7 +6,7 @@
 <title>Painel ADM — Despesas</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
 <style>
-:root{--green:#1D9E75;--green-dark:#0F6E56;--green-light:#E1F5EE;--red:#D85A30;--red-light:#FAECE7;--text:#1a1a1a;--text-2:#555;--text-3:#999;--bg:#f5f5f3;--surface:#fff;--border:rgba(0,0,0,0.08);--radius:12px}
+:root{--green:#1D9E75;--green-dark:#0F6E56;--green-light:#E1F5EE;--red:#D85A30;--red-light:#FAECE7;--amber:#BA7517;--amber-light:#FAEEDA;--text:#1a1a1a;--text-2:#555;--text-3:#999;--bg:#f5f5f3;--surface:#fff;--border:rgba(0,0,0,0.08);--radius:12px}
 @media(prefers-color-scheme:dark){:root{--text:#f0f0ee;--text-2:#aaa;--text-3:#666;--bg:#141414;--surface:#1e1e1e;--border:rgba(255,255,255,0.08)}}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
@@ -18,66 +18,101 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .login-logo p{font-size:13px;color:var(--text-3);margin-top:4px}
 .field{margin-bottom:14px}
 .field label{font-size:13px;color:var(--text-2);display:block;margin-bottom:6px;font-weight:500}
-.field input{width:100%;height:48px;border:1px solid var(--border);border-radius:8px;padding:0 14px;font-size:15px;background:var(--bg);color:var(--text);font-family:inherit}
-.field input:focus{outline:2px solid var(--green);outline-offset:-1px}
+.field input,.field select{width:100%;height:48px;border:1px solid var(--border);border-radius:8px;padding:0 14px;font-size:15px;background:var(--bg);color:var(--text);font-family:inherit;-webkit-appearance:none}
+.field input:focus,.field select:focus{outline:2px solid var(--green);outline-offset:-1px}
 .btn{width:100%;height:50px;border-radius:8px;border:none;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;background:var(--green);color:#fff}
 .btn:active{opacity:.85}
 .err{background:var(--red-light);color:var(--red);font-size:13px;padding:10px 14px;border-radius:8px;margin-bottom:14px;display:none}
 .err.show{display:block}
-.adm-wrap{display:none;max-width:900px;margin:0 auto;padding:24px 16px}
+.adm-wrap{display:none;max-width:960px;margin:0 auto;padding:24px 16px}
 .adm-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
 .adm-header h1{font-size:22px;font-weight:600}
 .adm-header-right{display:flex;align-items:center;gap:12px}
 .badge{background:var(--green-light);color:var(--green-dark);font-size:12px;font-weight:600;padding:4px 10px;border-radius:999px}
 .logout-btn{background:none;border:1px solid var(--border);color:var(--text-2);font-size:13px;padding:8px 14px;border-radius:8px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px}
-.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px}
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+@media(max-width:600px){.stats-row{grid-template-columns:1fr 1fr}}
 .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px}
 .stat-card .label{font-size:12px;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
 .stat-card .value{font-size:28px;font-weight:700;color:var(--text)}
 .stat-card .value.green{color:var(--green)}
+.stat-card .value.amber{color:var(--amber)}
+
+/* FILTRO */
+.filter-bar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.filter-bar input,.filter-bar select{height:38px;border:1px solid var(--border);border-radius:8px;padding:0 12px;font-size:13px;background:var(--surface);color:var(--text);font-family:inherit;-webkit-appearance:none}
+.filter-bar input{flex:1;min-width:160px}
+
+/* USERS */
 .users-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
-.users-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)}
-.users-head h2{font-size:16px;font-weight:600}
+.users-head{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--border)}
+.users-head h2{font-size:15px;font-weight:600}
 .refresh-btn{background:none;border:1px solid var(--border);color:var(--text-2);font-size:13px;padding:6px 12px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:6px}
-.user-row{display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid var(--border)}
+.user-row{display:flex;align-items:center;gap:14px;padding:13px 20px;border-bottom:1px solid var(--border);transition:background .1s}
 .user-row:last-child{border-bottom:none}
+.user-row:hover{background:var(--bg)}
 .user-avatar{width:40px;height:40px;border-radius:50%;background:var(--green-light);color:var(--green-dark);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;flex-shrink:0}
 .user-info{flex:1;min-width:0}
-.user-name{font-size:15px;font-weight:600;color:var(--text)}
-.user-email{font-size:12px;color:var(--text-3);margin-top:2px}
-.user-meta{font-size:11px;color:var(--text-3);margin-top:3px;display:flex;gap:10px}
-.user-actions{display:flex;gap:8px;flex-shrink:0}
-.pill{font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px}
+.user-name{font-size:14px;font-weight:600;color:var(--text)}
+.user-phone{font-size:12px;color:var(--text-3);margin-top:2px}
+.user-meta{font-size:11px;color:var(--text-3);margin-top:4px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.user-actions{display:flex;gap:6px;flex-shrink:0}
+.pill{font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;white-space:nowrap}
 .pill-green{background:var(--green-light);color:var(--green-dark)}
+.pill-amber{background:var(--amber-light);color:var(--amber)}
 .pill-gray{background:var(--bg);color:var(--text-3);border:1px solid var(--border)}
 .pill-red{background:var(--red-light);color:var(--red)}
-.icon-btn{width:34px;height:34px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text-2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px}
+.icon-btn{width:34px;height:34px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text-2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;transition:all .15s}
 .icon-btn:hover{border-color:var(--red);color:var(--red);background:var(--red-light)}
-.icon-btn.toggle:hover{border-color:var(--green);color:var(--green);background:var(--green-light)}
+.icon-btn.green:hover{border-color:var(--green);color:var(--green);background:var(--green-light)}
+.icon-btn.amber:hover{border-color:var(--amber);color:var(--amber);background:var(--amber-light)}
+
+/* MODAL PLANO */
+.modal-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;align-items:center;justify-content:center;padding:16px}
+.modal-backdrop.open{display:flex}
+.modal{background:var(--surface);border-radius:16px;padding:24px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal h3{font-size:17px;font-weight:600;margin-bottom:6px}
+.modal .sub{font-size:13px;color:var(--text-3);margin-bottom:20px}
+.plano-options{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
+.plano-opt{border:2px solid var(--border);border-radius:10px;padding:12px;cursor:pointer;transition:border-color .15s,background .15s;text-align:center}
+.plano-opt:hover{border-color:var(--green);background:var(--green-light)}
+.plano-opt.selected{border-color:var(--green);background:var(--green-light)}
+.plano-opt.remover{border-color:var(--red);background:var(--red-light);color:var(--red)}
+.plano-opt.remover:hover,.plano-opt.remover.selected{border-color:var(--red);background:var(--red-light)}
+.plano-opt-nome{font-size:13px;font-weight:700;color:var(--text)}
+.plano-opt.selected .plano-opt-nome{color:var(--green-dark)}
+.plano-opt.remover .plano-opt-nome{color:var(--red)}
+.plano-opt-detalhe{font-size:11px;color:var(--text-3);margin-top:3px}
+.plano-opt.selected .plano-opt-detalhe{color:var(--green-dark)}
+.dias-field{margin-bottom:16px}
+.dias-field label{font-size:13px;color:var(--text-2);display:block;margin-bottom:6px;font-weight:500}
+.dias-field input{width:100%;height:44px;border:1px solid var(--border);border-radius:8px;padding:0 12px;font-size:15px;background:var(--bg);color:var(--text);font-family:inherit}
+.modal-btns{display:flex;gap:8px}
+.modal-btn{flex:1;height:44px;border-radius:8px;border:none;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}
+.modal-btn.primary{background:var(--green);color:#fff}
+.modal-btn.cancel{background:var(--bg);color:var(--text-2);border:1px solid var(--border)}
+
 .empty{text-align:center;padding:3rem;color:var(--text-3);font-size:14px}
-.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:#1a1a1a;color:#fff;font-size:14px;font-weight:500;padding:12px 22px;border-radius:999px;transition:transform .3s cubic-bezier(.34,1.56,.64,1),opacity .3s;opacity:0;z-index:999;pointer-events:none}
+.empty i{font-size:28px;display:block;margin-bottom:8px;opacity:.3}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:#1a1a1a;color:#fff;font-size:14px;font-weight:500;padding:12px 22px;border-radius:999px;transition:transform .3s cubic-bezier(.34,1.56,.64,1),opacity .3s;opacity:0;z-index:999;pointer-events:none;white-space:nowrap}
 .toast.show{transform:translateX(-50%) translateY(0);opacity:1}
 .toast.error{background:var(--red)}
 </style>
 </head>
 <body>
 
-<!-- LOGIN ADM -->
+<!-- LOGIN -->
 <div id="login-wrap" class="login-wrap">
   <div class="login-card">
-    <div class="login-logo">
-      <i class="ti ti-shield-lock"></i>
-      <h1>Painel ADM</h1>
-      <p>Acesso restrito ao administrador</p>
-    </div>
+    <div class="login-logo"><i class="ti ti-shield-lock"></i><h1>Painel ADM</h1><p>Acesso restrito ao administrador</p></div>
     <div class="err" id="login-err"></div>
-    <div class="field"><label>Telefone</label><input type="tel" id="adm-email" placeholder="admin@email.com" autocomplete="email"></div>
+    <div class="field"><label>Telefone</label><input type="tel" id="adm-phone" placeholder="+5511999999999" autocomplete="tel"></div>
     <div class="field"><label>Senha</label><input type="password" id="adm-pw" placeholder="••••••" autocomplete="current-password"></div>
     <button class="btn" onclick="doAdmLogin()">Entrar</button>
   </div>
 </div>
 
-<!-- PAINEL ADM -->
+<!-- PAINEL -->
 <div id="adm-wrap" class="adm-wrap">
   <div class="adm-header">
     <h1>Painel de administração</h1>
@@ -86,17 +121,73 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <button class="logout-btn" onclick="doAdmLogout()"><i class="ti ti-logout" style="font-size:14px"></i> Sair</button>
     </div>
   </div>
+
+  <!-- STATS -->
   <div class="stats-row">
-    <div class="stat-card"><div class="label">Total de usuários</div><div class="value green" id="stat-total">—</div></div>
-    <div class="stat-card"><div class="label">Verificados</div><div class="value" id="stat-verified">—</div></div>
-    <div class="stat-card"><div class="label">Ativos</div><div class="value" id="stat-active">—</div></div>
+    <div class="stat-card"><div class="label">Total usuários</div><div class="value green" id="stat-total">—</div></div>
+    <div class="stat-card"><div class="label">Trial ativo</div><div class="value amber" id="stat-trial">—</div></div>
+    <div class="stat-card"><div class="label">Plano pago</div><div class="value green" id="stat-pagos">—</div></div>
+    <div class="stat-card"><div class="label">Expirados</div><div class="value" id="stat-exp">—</div></div>
   </div>
+
+  <!-- FILTRO -->
+  <div class="filter-bar">
+    <input type="text" id="busca" placeholder="Buscar por nome ou telefone..." oninput="filtrar()">
+    <select id="filtro-status" onchange="filtrar()">
+      <option value="">Todos os status</option>
+      <option value="trial">Trial</option>
+      <option value="ativo">Plano ativo</option>
+      <option value="expirado">Expirado</option>
+    </select>
+    <select id="filtro-plano" onchange="filtrar()">
+      <option value="">Todos os planos</option>
+      <option value="basico">Básico</option>
+      <option value="standard">Standard</option>
+      <option value="premium">Premium</option>
+    </select>
+  </div>
+
+  <!-- LISTA -->
   <div class="users-card">
     <div class="users-head">
-      <h2>Usuários cadastrados</h2>
+      <h2 id="users-count">Usuários</h2>
       <button class="refresh-btn" onclick="loadUsers()"><i class="ti ti-refresh" style="font-size:14px"></i> Atualizar</button>
     </div>
-    <div id="users-list"><div class="empty">Carregando...</div></div>
+    <div id="users-list"><div class="empty"><i class="ti ti-users"></i>Carregando...</div></div>
+  </div>
+</div>
+
+<!-- MODAL PLANO -->
+<div class="modal-backdrop" id="modal-plano">
+  <div class="modal">
+    <h3 id="modal-titulo">Gerenciar plano</h3>
+    <div class="sub" id="modal-sub">Escolha o plano e a duração</div>
+    <div class="plano-options">
+      <div class="plano-opt" id="opt-basico" onclick="selectPlanoOpt('basico')">
+        <div class="plano-opt-nome">Básico</div>
+        <div class="plano-opt-detalhe">100 lanç./mês · R$ 49/ano</div>
+      </div>
+      <div class="plano-opt" id="opt-standard" onclick="selectPlanoOpt('standard')">
+        <div class="plano-opt-nome">Standard</div>
+        <div class="plano-opt-detalhe">200 lanç./mês · R$ 60/ano</div>
+      </div>
+      <div class="plano-opt" id="opt-premium" onclick="selectPlanoOpt('premium')">
+        <div class="plano-opt-nome">Premium</div>
+        <div class="plano-opt-detalhe">500 lanç./mês · R$ 100/ano</div>
+      </div>
+      <div class="plano-opt remover" id="opt-remover" onclick="selectPlanoOpt('remover')">
+        <div class="plano-opt-nome"><i class="ti ti-x" style="font-size:12px"></i> Remover plano</div>
+        <div class="plano-opt-detalhe">Volta para expirado</div>
+      </div>
+    </div>
+    <div class="dias-field" id="dias-field">
+      <label>Duração (dias)</label>
+      <input type="number" id="modal-dias" value="365" min="1" max="3650">
+    </div>
+    <div class="modal-btns">
+      <button class="modal-btn cancel" onclick="closeModal()">Cancelar</button>
+      <button class="modal-btn primary" onclick="salvarPlano()">Salvar</button>
+    </div>
   </div>
 </div>
 
@@ -104,18 +195,25 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
 <script>
 let admToken=sessionStorage.getItem('adm-token');
+let allUsers=[];
+let modalUserId=null;
+let planoSelecionado=null;
 let toastTimer;
-function showToast(msg,isError=false){const t=document.getElementById('toast');t.textContent=msg;t.className='toast show'+(isError?' error':'');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.className='toast',2800)}
+
+function showToast(msg,isError=false){
+  const t=document.getElementById('toast');t.textContent=msg;
+  t.className='toast show'+(isError?' error':'');
+  clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.className='toast',3000);
+}
 function showErr(msg){const e=document.getElementById('login-err');e.textContent=msg;e.classList.add('show')}
 
 async function api(path,opts={}){
   const headers={'Content-Type':'application/json',...(admToken?{Authorization:'Bearer '+admToken}:{})};
-  const r=await fetch(path,{...opts,headers});
-  return r.json();
+  const r=await fetch(path,{...opts,headers});return r.json();
 }
 
 async function doAdmLogin(){
-  const phone=document.getElementById('adm-email').value.trim();
+  const phone=document.getElementById('adm-phone').value.trim();
   const pw=document.getElementById('adm-pw').value;
   try{
     const d=await api('/api/adm/login',{method:'POST',body:JSON.stringify({phone,password:pw})});
@@ -126,53 +224,120 @@ async function doAdmLogin(){
     loadUsers();
   }catch(e){showErr('Erro de conexão')}
 }
-
 function doAdmLogout(){admToken=null;sessionStorage.removeItem('adm-token');location.reload()}
 
 async function loadUsers(){
-  document.getElementById('users-list').innerHTML='<div class="empty">Carregando...</div>';
+  document.getElementById('users-list').innerHTML='<div class="empty"><i class="ti ti-loader"></i>Carregando...</div>';
   try{
-    const users=await api('/api/adm/users');
-    document.getElementById('stat-total').textContent=users.length;
-    document.getElementById('stat-verified').textContent=users.filter(u=>u.verified).length;
-    document.getElementById('stat-active').textContent=users.filter(u=>u.active).length;
-    if(!users.length){document.getElementById('users-list').innerHTML='<div class="empty">Nenhum usuário cadastrado</div>';return}
-    document.getElementById('users-list').innerHTML=users.map(u=>{
-      const initial=(u.name||'?')[0].toUpperCase();
-      const planosNome={basico:'Básico',standard:'Standard',premium:'Premium'};
-      const planoStatus=u.plano_status;
-      const planoBadge=
-        planoStatus==='trial'?'<span class="pill pill-green">Trial</span>':
-        planoStatus==='ativo'?`<span class="pill pill-green">Plano ${planosNome[u.plano]||u.plano}</span>`:
-        planoStatus==='adm'?'<span class="pill pill-green">ADM</span>':
-        '<span class="pill pill-red">Expirado</span>';
-      const actBadge=u.active?'<span class="pill pill-green">Ativo</span>':'<span class="pill pill-red">Inativo</span>';
-      const created=u.created?new Date(u.created).toLocaleDateString('pt-BR'):'—';
-      return`<div class="user-row">
-        <div class="user-avatar">${initial}</div>
-        <div class="user-info">
-          <div class="user-name">${u.name}</div>
-          <div class="user-email">${u.phone}</div>
-          <div class="user-meta">
-            <span><i class="ti ti-calendar" style="font-size:11px;vertical-align:-1px"></i> ${created}</span>
-            <span><i class="ti ti-receipt" style="font-size:11px;vertical-align:-1px"></i> ${u.despesas_count} lanç.</span>
-            ${planoBadge} ${actBadge}
-          </div>
+    allUsers=await api('/api/adm/users');
+    updateStats();filtrar();
+  }catch(e){document.getElementById('users-list').innerHTML='<div class="empty">Erro ao carregar</div>'}
+}
+
+function updateStats(){
+  document.getElementById('stat-total').textContent=allUsers.length;
+  document.getElementById('stat-trial').textContent=allUsers.filter(u=>u.plano_status==='trial').length;
+  document.getElementById('stat-pagos').textContent=allUsers.filter(u=>u.plano_status==='ativo').length;
+  document.getElementById('stat-exp').textContent=allUsers.filter(u=>u.plano_status==='expirado').length;
+}
+
+function filtrar(){
+  const busca=document.getElementById('busca').value.toLowerCase();
+  const status=document.getElementById('filtro-status').value;
+  const plano=document.getElementById('filtro-plano').value;
+  const filtered=allUsers.filter(u=>{
+    if(busca&&!u.name.toLowerCase().includes(busca)&&!u.phone.includes(busca))return false;
+    if(status&&u.plano_status!==status)return false;
+    if(plano&&u.plano!==plano)return false;
+    return true;
+  });
+  document.getElementById('users-count').textContent=`Usuários (${filtered.length})`;
+  renderUsers(filtered);
+}
+
+function renderUsers(users){
+  if(!users.length){
+    document.getElementById('users-list').innerHTML='<div class="empty"><i class="ti ti-user-off"></i>Nenhum usuário encontrado</div>';return;
+  }
+  const planosNome={basico:'Básico',standard:'Standard',premium:'Premium'};
+  document.getElementById('users-list').innerHTML=users.map(u=>{
+    const ini=(u.name||'?')[0].toUpperCase();
+    const ps=u.plano_status;
+    const planoBadge=
+      ps==='trial'?'<span class="pill pill-amber">Trial</span>':
+      ps==='ativo'?`<span class="pill pill-green">Plano ${planosNome[u.plano]||u.plano}</span>`:
+      ps==='adm'?'<span class="pill pill-green">ADM</span>':
+      '<span class="pill pill-red">Expirado</span>';
+    const actBadge=u.active?'<span class="pill pill-green">Ativo</span>':'<span class="pill pill-red">Inativo</span>';
+    const created=u.created||u.created_at?new Date(u.created||u.created_at).toLocaleDateString('pt-BR'):'—';
+    const planoEnd=u.plano_end?new Date(u.plano_end).toLocaleDateString('pt-BR'):'';
+    const trialEnd=u.trial_end?new Date(u.trial_end).toLocaleDateString('pt-BR'):'';
+    const vencimento=planoEnd?`vence ${planoEnd}`:trialEnd?`trial até ${trialEnd}`:'';
+    return`<div class="user-row">
+      <div class="user-avatar">${ini}</div>
+      <div class="user-info">
+        <div class="user-name">${u.name}</div>
+        <div class="user-phone">${u.phone}</div>
+        <div class="user-meta">
+          <span><i class="ti ti-calendar" style="font-size:10px;vertical-align:-1px"></i> ${created}</span>
+          <span><i class="ti ti-receipt" style="font-size:10px;vertical-align:-1px"></i> ${u.despesas_count} lanç.</span>
+          ${planoBadge} ${actBadge}
+          ${vencimento?`<span style="color:var(--text-3)">· ${vencimento}</span>`:''}
         </div>
-        <div class="user-actions">
-          <button class="icon-btn" title="Redefinir senha" onclick="resetSenha(${u.id},'${u.name}')">
-            <i class="ti ti-key"></i>
-          </button>
-          <button class="icon-btn toggle" title="${u.active?'Desativar':'Ativar'} usuário" onclick="toggleUser(${u.id},'${u.name}',${u.active})">
-            <i class="ti ${u.active?'ti-user-off':'ti-user-check'}"></i>
-          </button>
-          <button class="icon-btn" title="Remover usuário" onclick="deleteUser(${u.id},'${u.name}')">
-            <i class="ti ti-trash"></i>
-          </button>
-        </div>
-      </div>`;
-    }).join('');
-  }catch(e){document.getElementById('users-list').innerHTML='<div class="empty">Erro ao carregar usuários</div>'}
+      </div>
+      <div class="user-actions">
+        <button class="icon-btn amber" title="Gerenciar plano" onclick="openModal(${u.id},'${u.name.replace(/'/g,"\\'")}','${u.plano||''}')">
+          <i class="ti ti-crown"></i>
+        </button>
+        <button class="icon-btn" title="Redefinir senha" onclick="resetSenha(${u.id},'${u.name.replace(/'/g,"\\'")}')">
+          <i class="ti ti-key"></i>
+        </button>
+        <button class="icon-btn green" title="${u.active?'Desativar':'Ativar'}" onclick="toggleUser(${u.id},'${u.name.replace(/'/g,"\\'")}',${u.active})">
+          <i class="ti ${u.active?'ti-user-off':'ti-user-check'}"></i>
+        </button>
+        <button class="icon-btn" title="Remover usuário" onclick="deleteUser(${u.id},'${u.name.replace(/'/g,"\\'")}')">
+          <i class="ti ti-trash"></i>
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// MODAL PLANO
+function openModal(uid,name,planoAtual){
+  modalUserId=uid;planoSelecionado=planoAtual||null;
+  document.getElementById('modal-titulo').textContent='Plano de '+name;
+  document.getElementById('modal-sub').textContent=planoAtual?`Plano atual: ${planoAtual}`:'Sem plano ativo';
+  ['basico','standard','premium','remover'].forEach(p=>{
+    document.getElementById('opt-'+p).classList.toggle('selected',p===planoAtual||(p==='remover'&&!planoAtual));
+  });
+  document.getElementById('modal-dias').value=365;
+  document.getElementById('dias-field').style.display=planoSelecionado==='remover'?'none':'block';
+  document.getElementById('modal-plano').classList.add('open');
+}
+function closeModal(){document.getElementById('modal-plano').classList.remove('open');modalUserId=null;}
+function selectPlanoOpt(p){
+  planoSelecionado=p==='remover'?null:p;
+  ['basico','standard','premium','remover'].forEach(x=>{
+    document.getElementById('opt-'+x).classList.toggle('selected',x===p);
+  });
+  document.getElementById('dias-field').style.display=p==='remover'?'none':'block';
+}
+document.getElementById('modal-plano').addEventListener('click',function(e){if(e.target===this)closeModal()});
+
+async function salvarPlano(){
+  if(!modalUserId)return;
+  const dias=parseInt(document.getElementById('modal-dias').value)||365;
+  try{
+    const d=await api(`/api/adm/users/${modalUserId}/plano`,{
+      method:'POST',
+      body:JSON.stringify({plano:planoSelecionado,dias})
+    });
+    if(d.ok){
+      showToast(planoSelecionado?`Plano ${planoSelecionado} ativado por ${dias} dias`:'Plano removido');
+      closeModal();loadUsers();
+    }else showToast(d.error||'Erro',true);
+  }catch(e){showToast('Erro',true)}
 }
 
 async function resetSenha(id,name){
@@ -190,21 +355,26 @@ async function toggleUser(id,name,active){
   if(!confirm(`${active?'Desativar':'Ativar'} o usuário ${name}?`))return;
   try{
     const d=await api(`/api/adm/users/${id}/toggle`,{method:'POST'});
-    if(d.ok){showToast(`Usuário ${d.active?'ativado':'desativado'}`);loadUsers()}
+    if(d.ok){showToast(`Usuário ${d.active?'ativado':'desativado'}`);loadUsers();}
   }catch(e){showToast('Erro',true)}
 }
 
 async function deleteUser(id,name){
-  if(!confirm(`Remover permanentemente o usuário ${name} e todos os seus lançamentos?`))return;
+  if(!confirm(`Remover permanentemente ${name} e todos os seus dados?`))return;
   try{
     const d=await api(`/api/adm/users/${id}`,{method:'DELETE'});
-    if(d.ok){showToast('Usuário removido');loadUsers()}
+    if(d.ok){showToast('Usuário removido');loadUsers();}
   }catch(e){showToast('Erro',true)}
 }
 
-if(admToken){document.getElementById('login-wrap').style.display='none';document.getElementById('adm-wrap').style.display='block';loadUsers()}
-document.getElementById('adm-email').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('adm-pw').focus()});
+document.getElementById('adm-phone').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('adm-pw').focus()});
 document.getElementById('adm-pw').addEventListener('keydown',e=>{if(e.key==='Enter')doAdmLogin()});
+
+if(admToken){
+  document.getElementById('login-wrap').style.display='none';
+  document.getElementById('adm-wrap').style.display='block';
+  loadUsers();
+}
 </script>
 </body>
 </html>
