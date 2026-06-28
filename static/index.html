@@ -356,7 +356,7 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
         <i class="ti ti-crown" style="font-size:18px"></i> Assinar agora
       </a>
       <div style="font-size:12px;color:var(--text-3);margin-top:4px">
-        Planos a partir de <strong>R$ 49/ano</strong> após o trial
+        Planos a partir de <strong style="color:var(--cyan)">R$ 39,90/ano</strong> após o trial
       </div>
     </div>
   </div>
@@ -482,12 +482,13 @@ function renderHeroTrial(){
   } else if(s.status==='ativo'){
     const dias=s.plano_dias||0;
     const uso=s.uso_mes||0;const lim=s.limite;
+    const ilimitado=lim>=999999;
     const urgente=dias<=30;
     const nomes={basico:'Básico',standard:'Standard',premium:'Premium'};
     el.style.display='block';
     inner.innerHTML=`<div class="trial-pill${urgente?' urgente':''}">
       <i class="ti ti-crown"></i>
-      <span>Plano ${nomes[s.plano]||s.plano} · ${uso}/${lim} lançamentos · <strong>${dias} dia${dias===1?'':'s'}</strong></span>
+      <span>Plano ${nomes[s.plano]||s.plano} · ${ilimitado?'ilimitado':uso+'/'+lim+' lanç.'} · <strong>${dias} dia${dias===1?'':'s'}</strong></span>
       ${urgente?`<a href="/assinar">Renovar →</a>`:''}
     </div>`;
   } else if(s.status==='expirado'){
@@ -566,7 +567,7 @@ function checkRelatorios(e){
 // UPGRADE ALERT
 function showUpgradeAlert(recurso, nomeRecurso, planoMinimo){
   const nomes={standard:'Standard',premium:'Premium'};
-  const precos={standard:'R$ 59,90/ano',premium:'R$ 99,90/ano'};
+  const precos={standard:'R$ 69,90/ano',premium:'R$ 119,90/ano'};
   document.getElementById('upgrade-titulo').textContent=nomeRecurso+' não disponível';
   document.getElementById('upgrade-msg').textContent=
     `Este recurso está disponível a partir do plano ${nomes[planoMinimo]} (${precos[planoMinimo]}).`;
