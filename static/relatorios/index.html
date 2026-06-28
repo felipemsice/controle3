@@ -4,126 +4,123 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#0F6E56">
-<title>Relatórios — Despesas</title>
+<meta name="theme-color" content="#0a0a0f">
+<title>Relatórios · NexaPI Despesas</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
-:root{--green:#1D9E75;--green-dark:#0F6E56;--green-light:#E1F5EE;--green-mid:#9FE1CB;--red:#D85A30;--red-light:#FAECE7;--text:#1a1a1a;--text-2:#555;--text-3:#999;--bg:#f5f5f3;--surface:#fff;--border:rgba(0,0,0,0.08);--radius:16px;--radius-sm:10px}
-@media(prefers-color-scheme:dark){:root{--text:#f0f0ee;--text-2:#aaa;--text-3:#666;--bg:#141414;--surface:#1e1e1e;--border:rgba(255,255,255,0.08)}}
+:root{--cyan:#00d4ff;--cyan-dark:#0099bb;--cyan-glow:rgba(0,212,255,.15);--cyan-glow2:rgba(0,212,255,.06);--red:#ff4757;--red-light:rgba(255,71,87,.12);--amber:#ffa502;--amber-light:rgba(255,165,2,.12);--text:#f0f0f0;--text-2:#a0a0b0;--text-3:#606070;--bg:#0a0a0f;--bg2:#111118;--surface:#14141e;--surface2:#1e1e2e;--border:rgba(0,212,255,.12);--border2:rgba(255,255,255,.06);--radius:16px;--radius-sm:10px}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',sans-serif;color:var(--text);min-height:100vh}
 
-.auth-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
-.auth-card{width:100%;max-width:360px;background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);padding:28px 24px}
+/* AUTH */
+.auth-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:var(--bg)}
+.auth-card{width:100%;max-width:360px;background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);padding:28px 24px;box-shadow:0 0 40px var(--cyan-glow2)}
 .auth-logo{text-align:center;margin-bottom:24px}
-.auth-logo i{font-size:40px;color:var(--green)}
-.auth-logo h1{font-size:20px;font-weight:600;margin-top:8px}
+.auth-logo .nx-icon{width:48px;height:48px;border-radius:12px;background:rgba(0,212,255,.1);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;margin:0 auto 10px;font-size:22px;color:var(--cyan)}
+.auth-logo h1{font-size:19px;font-weight:700;color:var(--text)}
 .auth-logo p{font-size:13px;color:var(--text-3);margin-top:4px}
 .field{margin-bottom:14px}
 .field label{font-size:13px;color:var(--text-2);display:block;margin-bottom:6px;font-weight:500}
-.field input{width:100%;height:48px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 14px;font-size:15px;background:var(--bg);color:var(--text);font-family:inherit;-webkit-appearance:none}
-.field input:focus{outline:2px solid var(--green);outline-offset:-1px}
-.btn-login{width:100%;height:50px;border-radius:var(--radius-sm);border:none;font-size:16px;font-weight:600;cursor:pointer;background:var(--green);color:#fff;font-family:inherit}
-.err{background:var(--red-light);color:var(--red);font-size:13px;padding:10px 14px;border-radius:var(--radius-sm);margin-bottom:14px;display:none}
+.field input{width:100%;height:48px;border:1px solid var(--border2);border-radius:var(--radius-sm);padding:0 14px;font-size:15px;background:var(--bg2);color:var(--text);font-family:inherit;-webkit-appearance:none;transition:border-color .15s}
+.field input:focus{outline:none;border-color:var(--cyan);box-shadow:0 0 0 3px var(--cyan-glow)}
+.btn-login{width:100%;height:50px;border-radius:var(--radius-sm);border:none;font-size:15px;font-weight:700;cursor:pointer;background:linear-gradient(135deg,var(--cyan),var(--cyan-dark));color:#000;font-family:inherit}
+.err{background:var(--red-light);color:var(--red);border:1px solid rgba(255,71,87,.3);font-size:13px;padding:10px 14px;border-radius:var(--radius-sm);margin-bottom:14px;display:none}
 .err.show{display:block}
 
+/* APP */
 .wrap{display:none;max-width:900px;margin:0 auto;padding:0 0 3rem}
-
-.hero{background:var(--green-dark);border-radius:0 0 28px 28px;padding:env(safe-area-inset-top,16px) 20px 24px}
+.hero{background:linear-gradient(160deg,#0d1117,#060d18);border-bottom:1px solid var(--border);padding:env(safe-area-inset-top,16px) 20px 20px;position:relative;overflow:hidden}
+.hero::before{content:'π';position:absolute;right:-10px;top:-20px;font-size:120px;font-weight:700;color:rgba(0,212,255,.04);line-height:1;pointer-events:none;font-family:serif}
 .hero-top{display:flex;justify-content:space-between;align-items:center;padding-top:8px}
-.hero-title{font-size:17px;font-weight:600;color:var(--green-light)}
+.hero-title{font-size:14px;font-weight:700;color:var(--cyan);letter-spacing:.08em;text-transform:uppercase;display:flex;align-items:center;gap:8px}
 .hero-nav{display:flex;align-items:center;gap:8px}
-.nav-btn{background:rgba(255,255,255,.12);border:none;color:var(--green-mid);font-size:13px;padding:6px 12px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:6px;font-family:inherit;text-decoration:none}
-.logout-btn{background:rgba(255,255,255,.12);border:none;color:var(--green-mid);font-size:13px;padding:6px 10px;border-radius:8px;cursor:pointer}
+.nav-btn{background:rgba(0,212,255,.08);border:1px solid var(--border);color:var(--cyan);font-size:12px;padding:6px 12px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:6px;font-family:inherit;text-decoration:none}
+.logout-btn{background:rgba(255,255,255,.05);border:1px solid var(--border2);color:var(--text-3);font-size:13px;padding:6px 10px;border-radius:8px;cursor:pointer}
 
 /* FILTROS */
-.filters{background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);padding:16px;margin:16px 16px 0}
+.filters{background:var(--surface);border-radius:var(--radius);border:1px solid var(--border2);padding:16px;margin:16px 16px 0}
 .filters-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
-.filters-title{font-size:13px;font-weight:600;color:var(--text-2);text-transform:uppercase;letter-spacing:.05em}
-.export-btn{height:36px;padding:0 14px;border-radius:var(--radius-sm);border:none;background:#217346;color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px;transition:opacity .15s}
-.export-btn:hover{opacity:.9}
-.export-btn:active{opacity:.75}
+.filters-title{font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.1em}
+.export-btn{height:36px;padding:0 14px;border-radius:var(--radius-sm);border:none;background:linear-gradient(135deg,var(--cyan),var(--cyan-dark));color:#000;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px}
 .export-btn i{font-size:15px}
 .filters-row{display:flex;gap:10px;flex-wrap:wrap}
 .filter-group{display:flex;flex-direction:column;gap:4px;flex:1;min-width:110px}
-.filter-group label{font-size:12px;color:var(--text-3);font-weight:500}
-.filter-group select{height:40px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 10px;font-size:14px;background:var(--bg);color:var(--text);font-family:inherit;-webkit-appearance:none;cursor:pointer}
-.filter-group select:focus{outline:2px solid var(--green);outline-offset:-1px}
-.filter-clear{height:40px;padding:0 14px;border-radius:var(--radius-sm);border:1px solid var(--border);background:none;color:var(--text-3);font-size:13px;cursor:pointer;font-family:inherit;align-self:flex-end;white-space:nowrap}
-.filter-clear:hover{background:var(--bg)}
+.filter-group label{font-size:11px;color:var(--text-3);font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+.filter-group select{height:40px;border:1px solid var(--border2);border-radius:var(--radius-sm);padding:0 10px;font-size:14px;background:var(--bg2);color:var(--text);font-family:inherit;-webkit-appearance:none;cursor:pointer;transition:border-color .15s}
+.filter-group select:focus{outline:none;border-color:var(--cyan)}
+.filter-clear{height:40px;padding:0 14px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:none;color:var(--text-3);font-size:13px;cursor:pointer;font-family:inherit;align-self:flex-end;white-space:nowrap}
 .active-filters{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
-.filter-tag{display:flex;align-items:center;gap:5px;background:var(--green-light);color:var(--green-dark);font-size:12px;font-weight:500;padding:4px 10px;border-radius:999px}
-.filter-tag button{background:none;border:none;cursor:pointer;color:var(--green-dark);font-size:14px;line-height:1;padding:0}
+.filter-tag{display:flex;align-items:center;gap:5px;background:rgba(0,212,255,.1);color:var(--cyan);border:1px solid var(--border);font-size:11px;font-weight:600;padding:4px 10px;border-radius:999px}
+.filter-tag button{background:none;border:none;cursor:pointer;color:var(--cyan);font-size:14px;line-height:1;padding:0}
 
 /* RESUMO */
 .summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:12px 16px 0}
 @media(max-width:500px){.summary{grid-template-columns:1fr 1fr}}
-.sum-card{background:var(--surface);border-radius:var(--radius-sm);border:1px solid var(--border);padding:14px 16px}
-.sum-label{font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+.sum-card{background:var(--surface);border-radius:var(--radius-sm);border:1px solid var(--border2);padding:14px 16px}
+.sum-label{font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;font-weight:600}
 .sum-value{font-size:22px;font-weight:700;color:var(--text);letter-spacing:-.02em}
-.sum-value.green{color:var(--green)}
+.sum-value.cyan{color:var(--cyan)}
 .sum-sub{font-size:11px;color:var(--text-3);margin-top:3px}
 
 .section{padding:16px 16px 0}
 .section-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
-.section-title{font-size:15px;font-weight:600;color:var(--text)}
+.section-title{font-size:12px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.08em}
 
-/* GRÁFICO CATEGORIAS */
-.chart-card{background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);padding:16px}
+/* GRÁFICO */
+.chart-card{background:var(--surface);border-radius:var(--radius);border:1px solid var(--border2);padding:16px}
 .bar-row{display:flex;align-items:center;gap:10px;margin-bottom:12px}
 .bar-row:last-child{margin-bottom:0}
-.bar-cat{font-size:13px;color:var(--text-2);width:100px;flex-shrink:0;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;justify-content:flex-end;gap:6px}
-.bar-cat i{font-size:14px;flex-shrink:0}
-.bar-track{flex:1;height:28px;background:var(--bg);border-radius:6px;overflow:hidden}
+.bar-cat{font-size:12px;color:var(--text-2);width:100px;flex-shrink:0;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;justify-content:flex-end;gap:6px}
+.bar-track{flex:1;height:28px;background:var(--bg2);border-radius:6px;overflow:hidden}
 .bar-fill{height:100%;border-radius:6px;transition:width .6s cubic-bezier(.4,0,.2,1);display:flex;align-items:center;padding-left:10px}
-.bar-pct{font-size:11px;font-weight:700;color:rgba(255,255,255,.95)}
-.bar-val{font-size:13px;font-weight:600;color:var(--text);width:90px;text-align:right;flex-shrink:0;white-space:nowrap}
+.bar-pct{font-size:11px;font-weight:700;color:rgba(0,0,0,.8)}
+.bar-val{font-size:13px;font-weight:600;color:var(--cyan);width:90px;text-align:right;flex-shrink:0;white-space:nowrap}
 
 /* MENSAL */
-.monthly-card{background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);overflow:hidden}
-.month-row{display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid var(--border)}
+.monthly-card{background:var(--surface);border-radius:var(--radius);border:1px solid var(--border2);overflow:hidden}
+.month-row{display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid var(--border2)}
 .month-row:last-child{border-bottom:none}
-.month-label{font-size:14px;font-weight:600;color:var(--text);width:100px;flex-shrink:0}
-.month-track{flex:1;height:20px;background:var(--bg);border-radius:4px;overflow:hidden}
-.month-fill{height:100%;border-radius:4px;background:var(--green);transition:width .5s cubic-bezier(.4,0,.2,1)}
-.month-val{font-size:14px;font-weight:600;color:var(--text);width:100px;text-align:right;flex-shrink:0}
+.month-row:hover{background:var(--bg2)}
+.month-label{font-size:13px;font-weight:600;color:var(--text);width:100px;flex-shrink:0}
+.month-track{flex:1;height:20px;background:var(--bg2);border-radius:4px;overflow:hidden}
+.month-fill{height:100%;border-radius:4px;background:var(--cyan);transition:width .5s cubic-bezier(.4,0,.2,1)}
+.month-val{font-size:13px;font-weight:600;color:var(--cyan);width:100px;text-align:right;flex-shrink:0}
 .month-count{font-size:11px;color:var(--text-3);width:60px;text-align:right;flex-shrink:0}
 
 /* TABELA */
-.table-card{background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);overflow:hidden}
+.table-card{background:var(--surface);border-radius:var(--radius);border:1px solid var(--border2);overflow:hidden}
 .table-wrap{overflow-x:auto}
 table{width:100%;border-collapse:collapse;font-size:13px}
-th{text-align:left;padding:10px 14px;color:var(--text-3);font-weight:600;border-bottom:1px solid var(--border);white-space:nowrap;font-size:11px;text-transform:uppercase;letter-spacing:.04em;cursor:pointer;user-select:none}
-th:hover{color:var(--text)}
-th.sorted{color:var(--green)}
-td{padding:11px 14px;border-bottom:1px solid var(--border);vertical-align:middle}
+th{text-align:left;padding:10px 14px;color:var(--text-3);font-weight:700;border-bottom:1px solid var(--border2);white-space:nowrap;font-size:10px;text-transform:uppercase;letter-spacing:.08em;cursor:pointer;user-select:none}
+th:hover{color:var(--cyan)}
+th.sorted{color:var(--cyan)}
+td{padding:11px 14px;border-bottom:1px solid var(--border2);vertical-align:middle}
 tr:last-child td{border-bottom:none}
-tr:hover td{background:var(--bg)}
+tr:hover td{background:var(--bg2)}
 .cat-badge{font-size:11px;font-weight:600;padding:3px 8px;border-radius:999px;white-space:nowrap}
-.td-amount{font-weight:700;text-align:right;white-space:nowrap}
+.td-amount{font-weight:700;text-align:right;white-space:nowrap;color:var(--cyan)}
 .td-date{white-space:nowrap;color:var(--text-2)}
 .td-time{font-size:11px;color:var(--text-3)}
-.photo-thumb{width:28px;height:28px;border-radius:6px;object-fit:cover;cursor:zoom-in}
+.photo-thumb{width:28px;height:28px;border-radius:6px;object-fit:cover;cursor:zoom-in;border:1px solid var(--border)}
 
 /* PAGINAÇÃO */
-.pagination{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-top:1px solid var(--border);flex-wrap:wrap;gap:8px}
-.page-info{font-size:13px;color:var(--text-3)}
+.pagination{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-top:1px solid var(--border2);flex-wrap:wrap;gap:8px}
+.page-info{font-size:12px;color:var(--text-3)}
 .page-btns{display:flex;gap:5px}
-.page-btn{height:32px;padding:0 11px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text-2);font-size:13px;cursor:pointer;font-family:inherit}
-.page-btn:disabled{opacity:.35;cursor:default}
-.page-btn.active{background:var(--green);color:#fff;border-color:var(--green)}
+.page-btn{height:32px;padding:0 11px;border-radius:8px;border:1px solid var(--border2);background:var(--bg2);color:var(--text-2);font-size:13px;cursor:pointer;font-family:inherit}
+.page-btn:disabled{opacity:.3;cursor:default}
+.page-btn.active{background:var(--cyan);color:#000;border-color:var(--cyan);font-weight:700}
 
 .viewer{display:none;position:fixed;inset:0;background:#000;z-index:200;align-items:center;justify-content:center}
 .viewer.open{display:flex}
 .viewer img{max-width:100%;max-height:100%;object-fit:contain}
-.viewer-close{position:absolute;top:20px;right:20px;width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.15);border:none;color:#fff;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center}
-
+.viewer-close{position:absolute;top:20px;right:20px;width:40px;height:40px;border-radius:50%;background:rgba(0,212,255,.1);border:1px solid var(--border);color:var(--cyan);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .empty{text-align:center;padding:3rem;color:var(--text-3);font-size:14px}
-.empty i{font-size:36px;display:block;margin-bottom:8px;opacity:.3}
-.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:#1a1a1a;color:#fff;font-size:14px;font-weight:500;padding:12px 22px;border-radius:999px;white-space:nowrap;transition:transform .3s cubic-bezier(.34,1.56,.64,1),opacity .3s;opacity:0;z-index:999;pointer-events:none}
+.empty i{font-size:36px;display:block;margin-bottom:8px;opacity:.2}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--surface2);color:var(--cyan);border:1px solid var(--border);font-size:14px;font-weight:500;padding:12px 22px;border-radius:999px;white-space:nowrap;transition:transform .3s cubic-bezier(.34,1.56,.64,1),opacity .3s;opacity:0;z-index:999;pointer-events:none;box-shadow:0 8px 24px var(--cyan-glow)}
 .toast.show{transform:translateX(-50%) translateY(0);opacity:1}
-.toast.error{background:var(--red)}
+.toast.error{background:var(--red-light);color:var(--red);border-color:rgba(255,71,87,.3);box-shadow:none}
 </style>
 </head>
 <body>
@@ -131,7 +128,11 @@ tr:hover td{background:var(--bg)}
 <!-- LOGIN -->
 <div id="auth-wrap" class="auth-wrap">
   <div class="auth-card">
-    <div class="auth-logo"><i class="ti ti-chart-bar"></i><h1>Relatórios</h1><p>Faça login para continuar</p></div>
+    <div class="auth-logo">
+      <div class="nx-icon"><i class="ti ti-chart-bar"></i></div>
+      <h1>Relatórios</h1>
+      <p>Faça login para continuar</p>
+    </div>
     <div class="err" id="auth-err"></div>
     <div class="field"><label>Telefone</label><input type="tel" id="auth-phone" placeholder="(11) 99999-9999" inputmode="tel"></div>
     <div class="field"><label>Senha</label><input type="password" id="auth-pw" placeholder="••••••"></div>
@@ -143,9 +144,9 @@ tr:hover td{background:var(--bg)}
 <div class="wrap" id="app-wrap">
   <div class="hero">
     <div class="hero-top">
-      <span class="hero-title"><i class="ti ti-chart-bar" style="font-size:15px;vertical-align:-2px;margin-right:6px"></i>Relatórios</span>
+      <span class="hero-title"><i class="ti ti-chart-bar" style="font-size:15px"></i> Relatórios</span>
       <div class="hero-nav">
-        <a href="/" class="nav-btn"><i class="ti ti-home" style="font-size:14px"></i> App</a>
+        <a href="/" class="nav-btn"><i class="ti ti-home" style="font-size:13px"></i> App</a>
         <button class="logout-btn" onclick="doLogout()"><i class="ti ti-logout" style="font-size:14px"></i></button>
       </div>
     </div>
@@ -178,18 +179,14 @@ tr:hover td{background:var(--bg)}
       </div>
       <div class="filter-group">
         <label>Categoria</label>
-        <select id="f-cat" onchange="onFilterChange()">
-          <option value="">Todas</option>
-        </select>
+        <select id="f-cat" onchange="onFilterChange()"><option value="">Todas</option></select>
       </div>
       <div class="filter-group">
         <label>Valor mín.</label>
         <select id="f-min" onchange="onFilterChange()">
           <option value="0">Qualquer</option>
-          <option value="50">R$ 50+</option>
-          <option value="100">R$ 100+</option>
-          <option value="200">R$ 200+</option>
-          <option value="500">R$ 500+</option>
+          <option value="50">R$ 50+</option><option value="100">R$ 100+</option>
+          <option value="200">R$ 200+</option><option value="500">R$ 500+</option>
           <option value="1000">R$ 1.000+</option>
         </select>
       </div>
@@ -197,26 +194,24 @@ tr:hover td{background:var(--bg)}
         <label>Valor máx.</label>
         <select id="f-max" onchange="onFilterChange()">
           <option value="0">Qualquer</option>
-          <option value="100">Até R$ 100</option>
-          <option value="200">Até R$ 200</option>
-          <option value="500">Até R$ 500</option>
-          <option value="1000">Até R$ 1.000</option>
+          <option value="100">Até R$ 100</option><option value="200">Até R$ 200</option>
+          <option value="500">Até R$ 500</option><option value="1000">Até R$ 1.000</option>
           <option value="5000">Até R$ 5.000</option>
         </select>
       </div>
-      <button class="filter-clear" onclick="clearFilters()"><i class="ti ti-x" style="font-size:13px"></i> Limpar</button>
+      <button class="filter-clear" onclick="clearFilters()"><i class="ti ti-x" style="font-size:12px"></i> Limpar</button>
     </div>
     <div class="active-filters" id="active-filters"></div>
   </div>
 
   <!-- RESUMO -->
   <div class="summary">
-    <div class="sum-card"><div class="sum-label">Total do período</div><div class="sum-value green" id="s-total">R$ 0,00</div><div class="sum-sub" id="s-period">—</div></div>
+    <div class="sum-card"><div class="sum-label">Total do período</div><div class="sum-value cyan" id="s-total">R$ 0,00</div><div class="sum-sub" id="s-period">—</div></div>
     <div class="sum-card"><div class="sum-label">Lançamentos</div><div class="sum-value" id="s-count">0</div><div class="sum-sub" id="s-avg-ticket">—</div></div>
     <div class="sum-card"><div class="sum-label">Média mensal</div><div class="sum-value" id="s-avg">R$ 0,00</div><div class="sum-sub" id="s-months">—</div></div>
   </div>
 
-  <!-- GRÁFICO CATEGORIA -->
+  <!-- GRÁFICO -->
   <div class="section">
     <div class="section-head"><span class="section-title">Por categoria</span></div>
     <div class="chart-card" id="chart-cat"><div class="empty"><i class="ti ti-chart-bar"></i>Nenhum dado</div></div>
@@ -232,19 +227,17 @@ tr:hover td{background:var(--bg)}
   <div class="section">
     <div class="section-head">
       <span class="section-title">Lançamentos detalhados</span>
-      <span id="table-count" style="font-size:13px;color:var(--text-3)"></span>
+      <span id="table-count" style="font-size:12px;color:var(--text-3)"></span>
     </div>
     <div class="table-card">
       <div class="table-wrap">
         <table>
-          <thead>
-            <tr>
-              <th onclick="sortBy('date')" id="th-date">Data <i class="ti ti-selector" style="font-size:11px"></i></th>
-              <th onclick="sortBy('cat')" id="th-cat">Categoria <i class="ti ti-selector" style="font-size:11px"></i></th>
-              <th onclick="sortBy('val')" id="th-val" style="text-align:right">Valor <i class="ti ti-selector" style="font-size:11px"></i></th>
-              <th style="text-align:center">Foto</th>
-            </tr>
-          </thead>
+          <thead><tr>
+            <th onclick="sortBy('date')" id="th-date">Data <i class="ti ti-selector" style="font-size:10px"></i></th>
+            <th onclick="sortBy('cat')" id="th-cat">Categoria <i class="ti ti-selector" style="font-size:10px"></i></th>
+            <th onclick="sortBy('val')" id="th-val" style="text-align:right">Valor <i class="ti ti-selector" style="font-size:10px"></i></th>
+            <th style="text-align:center">Foto</th>
+          </tr></thead>
           <tbody id="table-body"></tbody>
         </table>
       </div>
@@ -267,15 +260,15 @@ tr:hover td{background:var(--bg)}
 const MONTHS=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 const CATS_PADRAO=['Combustível','Alimentação','Lazer','Saúde','Transporte','Moradia','Educação','Vestuário','Outros'];
 const CAT_META_BASE={
-  'Combustível':{bg:'#E1F5EE',color:'#085041',icon:'ti-gas-station',bar:'#1D9E75'},
-  'Alimentação':{bg:'#E6F1FB',color:'#042C53',icon:'ti-tools-kitchen-2',bar:'#378ADD'},
-  'Lazer':{bg:'#FAEEDA',color:'#412402',icon:'ti-device-gamepad-2',bar:'#BA7517'},
-  'Saúde':{bg:'#FAECE7',color:'#4A1B0C',icon:'ti-heart-rate-monitor',bar:'#D85A30'},
-  'Transporte':{bg:'#EEEDFE',color:'#26215C',icon:'ti-bus',bar:'#534AB7'},
-  'Moradia':{bg:'#EAF3DE',color:'#173404',icon:'ti-home-2',bar:'#639922'},
-  'Educação':{bg:'#FBEAF0',color:'#4B1528',icon:'ti-book',bar:'#993556'},
-  'Vestuário':{bg:'#F1EFE8',color:'#2C2C2A',icon:'ti-hanger',bar:'#5F5E5A'},
-  'Outros':{bg:'#F1EFE8',color:'#444441',icon:'ti-dots',bar:'#888'}
+  'Combustível':{bg:'#1a2e1a',color:'#00d4ff',bar:'#00d4ff'},
+  'Alimentação':{bg:'#1a1e2e',color:'#7b9fff',bar:'#7b9fff'},
+  'Lazer':{bg:'#2e2a1a',color:'#ffa502',bar:'#ffa502'},
+  'Saúde':{bg:'#2e1a1a',color:'#ff4757',bar:'#ff4757'},
+  'Transporte':{bg:'#1e1a2e',color:'#a78bfa',bar:'#a78bfa'},
+  'Moradia':{bg:'#1a2e1a',color:'#34d399',bar:'#34d399'},
+  'Educação':{bg:'#2e1a24',color:'#f472b6',bar:'#f472b6'},
+  'Vestuário':{bg:'#1e1e1e',color:'#9ca3af',bar:'#9ca3af'},
+  'Outros':{bg:'#1a1a1a',color:'#6b7280',bar:'#6b7280'}
 };
 let CAT_META={...CAT_META_BASE};
 let authToken=localStorage.getItem('token');
@@ -283,12 +276,9 @@ let allEntries=[],filtered=[],sortCol='date',sortDir=-1,page=1;
 const PER_PAGE=15;
 
 function fmtR(v){return'R$ '+v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}
-function fmtRaw(v){return v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}
-
 let toastTimer;
 function showToast(msg,isError=false){const t=document.getElementById('toast');t.textContent=msg;t.className='toast show'+(isError?' error':'');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.className='toast',2800)}
 
-// AUTH
 async function doLogin(){
   const phone=document.getElementById('auth-phone').value;
   const pw=document.getElementById('auth-pw').value;
@@ -299,52 +289,37 @@ async function doLogin(){
     authToken=d.token;localStorage.setItem('token',authToken);localStorage.setItem('uname',d.name);
     document.getElementById('auth-wrap').style.display='none';
     document.getElementById('app-wrap').style.display='block';
-    initYears();
-    await loadCategorias();
-    await loadEntries();
+    initYears();await loadCategorias();await loadEntries();
   }catch(e){const el=document.getElementById('auth-err');el.textContent='Erro de conexão';el.classList.add('show')}
 }
 function doLogout(){authToken=null;localStorage.removeItem('token');localStorage.removeItem('uname');location.reload()}
 document.getElementById('auth-pw').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()});
 
 async function api(path){
-  const r=await fetch(path,{headers:{Authorization:'Bearer '+authToken}});
-  return r.json();
+  const r=await fetch(path,{headers:{Authorization:'Bearer '+authToken}});return r.json();
 }
 
-// CATEGORIAS DINÂMICAS
 async function loadCategorias(){
   try{
     const d=await api('/api/categorias');
     CAT_META={...CAT_META_BASE};
-    (d.custom||[]).forEach(c=>{
-      CAT_META[c.nome]={bg:c.cor_bg,color:c.cor_text,icon:c.icone||'ti-tag',bar:c.cor_bar};
-    });
-    buildCatFilter(d.custom||[]);
+    (d.custom||[]).forEach(c=>{CAT_META[c.nome]={bg:'#1a1a2e',color:c.cor_bar||'#00d4ff',bar:c.cor_bar||'#00d4ff'};});
+    const sel=document.getElementById('f-cat');
+    const prev=sel.value;
+    sel.innerHTML='<option value="">Todas</option>';
+    CATS_PADRAO.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;sel.appendChild(o)});
+    if(d.custom&&d.custom.length){
+      const sep=document.createElement('option');sep.disabled=true;sep.textContent='── Personalizadas ──';sel.appendChild(sep);
+      d.custom.forEach(c=>{const o=document.createElement('option');o.value=c.nome;o.textContent=c.nome;sel.appendChild(o)});
+    }
+    if(prev)sel.value=prev;
   }catch(e){}
-}
-
-function buildCatFilter(custom){
-  const sel=document.getElementById('f-cat');
-  const prev=sel.value;
-  sel.innerHTML='<option value="">Todas</option>';
-  CATS_PADRAO.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;sel.appendChild(o)});
-  if(custom.length){
-    const sep=document.createElement('option');sep.disabled=true;sep.textContent='── Personalizadas ──';sel.appendChild(sep);
-    custom.forEach(c=>{const o=document.createElement('option');o.value=c.nome;o.textContent=c.nome;sel.appendChild(o)});
-  }
-  if(prev)sel.value=prev;
 }
 
 function initYears(){
   const sel=document.getElementById('f-year');
   sel.innerHTML='<option value="">Todos</option>';
-  for(let y=2024;y<=2035;y++){
-    const o=document.createElement('option');
-    o.value=y;o.textContent=y;
-    if(y===new Date().getFullYear())o.selected=true;
-    sel.appendChild(o);
-  }
+  for(let y=2024;y<=2035;y++){const o=document.createElement('option');o.value=y;o.textContent=y;if(y===new Date().getFullYear())o.selected=true;sel.appendChild(o);}
 }
 
 async function loadEntries(){
@@ -355,10 +330,8 @@ function onFilterChange(){page=1;applyFilters()}
 
 function clearFilters(){
   document.getElementById('f-year').value=new Date().getFullYear();
-  document.getElementById('f-month').value='';
-  document.getElementById('f-cat').value='';
-  document.getElementById('f-min').value='0';
-  document.getElementById('f-max').value='0';
+  document.getElementById('f-month').value='';document.getElementById('f-cat').value='';
+  document.getElementById('f-min').value='0';document.getElementById('f-max').value='0';
   page=1;applyFilters();
 }
 
@@ -375,7 +348,6 @@ function applyFilters(){
   const cat=document.getElementById('f-cat').value;
   const min=parseFloat(document.getElementById('f-min').value)||0;
   const max=parseFloat(document.getElementById('f-max').value)||0;
-
   filtered=allEntries.filter(e=>{
     const d=parseDate(e.date);
     if(year&&d.year!=year)return false;
@@ -385,12 +357,9 @@ function applyFilters(){
     if(max>0&&e.val>max)return false;
     return true;
   });
-
   renderActiveTags(year,month,cat,min,max);
   renderSummary(year,month,cat);
-  renderCatChart();
-  renderMonthlyChart();
-  renderTable();
+  renderCatChart();renderMonthlyChart();renderTable();
 }
 
 function renderActiveTags(year,month,cat,min,max){
@@ -411,13 +380,11 @@ function renderSummary(year,month,cat){
   const count=filtered.length;
   const monthSet=new Set(filtered.map(e=>{const d=parseDate(e.date);return d.year+'-'+d.month}));
   const months=monthSet.size||1;
-
   document.getElementById('s-total').textContent=fmtR(total);
   document.getElementById('s-count').textContent=count;
   document.getElementById('s-avg-ticket').textContent=count?'ticket médio '+fmtR(total/count):'sem lançamentos';
   document.getElementById('s-avg').textContent=fmtR(total/months);
   document.getElementById('s-months').textContent=months+' '+(months===1?'mês':'meses');
-
   let period='Todos os registros';
   if(year&&month)period=MONTHS[+month-1]+' / '+year;
   else if(year)period='Ano '+year;
@@ -429,17 +396,14 @@ function renderSummary(year,month,cat){
 function renderCatChart(){
   const cc=document.getElementById('chart-cat');
   if(!filtered.length){cc.innerHTML='<div class="empty"><i class="ti ti-chart-bar"></i>Nenhum dado</div>';return}
-  const totals={};
-  filtered.forEach(e=>{totals[e.cat]=(totals[e.cat]||0)+e.val});
+  const totals={};filtered.forEach(e=>{totals[e.cat]=(totals[e.cat]||0)+e.val});
   const sorted=Object.entries(totals).sort((a,b)=>b[1]-a[1]);
-  const grand=filtered.reduce((s,e)=>s+e.val,0);
-  const mx=sorted[0][1];
+  const grand=filtered.reduce((s,e)=>s+e.val,0);const mx=sorted[0][1];
   cc.innerHTML=sorted.map(([cat,val])=>{
-    const m=CAT_META[cat]||{icon:'ti-tag',bar:'#888',bg:'#eee',color:'#333'};
-    const pct=Math.round(val/grand*100);
-    const w=Math.round(val/mx*100);
+    const m=CAT_META[cat]||{bar:'#00d4ff',bg:'#1a1a2e',color:'#00d4ff'};
+    const pct=Math.round(val/grand*100);const w=Math.round(val/mx*100);
     return`<div class="bar-row">
-      <div class="bar-cat"><i class="ti ${m.icon}" style="color:${m.color}"></i>${cat}</div>
+      <div class="bar-cat" style="color:${m.color}">${cat}</div>
       <div class="bar-track"><div class="bar-fill" style="width:${w}%;background:${m.bar}"><span class="bar-pct">${pct}%</span></div></div>
       <div class="bar-val">${fmtR(val)}</div>
     </div>`;
@@ -450,11 +414,7 @@ function renderMonthlyChart(){
   const mc=document.getElementById('chart-monthly');
   if(!filtered.length){mc.innerHTML='<div class="empty"><i class="ti ti-calendar"></i>Nenhum dado</div>';return}
   const totals={},counts={};
-  filtered.forEach(e=>{
-    const d=parseDate(e.date);
-    const k=d.year+'-'+(d.month<10?'0':'')+d.month;
-    totals[k]=(totals[k]||0)+e.val;counts[k]=(counts[k]||0)+1;
-  });
+  filtered.forEach(e=>{const d=parseDate(e.date);const k=d.year+'-'+(d.month<10?'0':'')+d.month;totals[k]=(totals[k]||0)+e.val;counts[k]=(counts[k]||0)+1;});
   const sorted=Object.entries(totals).sort((a,b)=>a[0]>b[0]?1:-1);
   const mx=Math.max(...Object.values(totals));
   mc.innerHTML=sorted.map(([k,val])=>{
@@ -486,21 +446,18 @@ function getSorted(){
 }
 
 function renderTable(){
-  const sorted=getSorted();
-  const total=sorted.length;
+  const sorted=getSorted();const total=sorted.length;
   const pages=Math.max(1,Math.ceil(total/PER_PAGE));
   if(page>pages)page=pages;
-  const start=(page-1)*PER_PAGE;
-  const slice=sorted.slice(start,start+PER_PAGE);
+  const start=(page-1)*PER_PAGE;const slice=sorted.slice(start,start+PER_PAGE);
   document.getElementById('table-count').textContent=total?total+' registro(s)':'';
-
   const tbody=document.getElementById('table-body');
-  if(!slice.length){
-    tbody.innerHTML=`<tr><td colspan="4"><div class="empty"><i class="ti ti-receipt-off"></i>Nenhum lançamento</div></td></tr>`;
+  if(!slice.length){tbody.innerHTML=`<tr><td colspan="4"><div class="empty"><i class="ti ti-receipt-off"></i>Nenhum lançamento</div></td></tr>`;
   }else{
     tbody.innerHTML=slice.map(e=>{
-      const m=CAT_META[e.cat]||{bg:'#eee',color:'#333'};
-      const photo=e.photo?`<img src="/api/photo/${e.photo}" class="photo-thumb" onclick="openViewer('/api/photo/${e.photo}')" alt="foto">`:`<span style="color:var(--text-3);font-size:12px">—</span>`;
+      const m=CAT_META[e.cat]||{bg:'#1a1a2e',color:'#00d4ff'};
+      const imgSrc=e.photo_inline||(e.photo&&!e.photo.startsWith('db:')?`/api/photo/${e.photo}`:null);
+      const photo=imgSrc?`<img src="${imgSrc}" class="photo-thumb" onclick="openViewer('${imgSrc}')" alt="foto">`:`<span style="color:var(--text-3);font-size:12px">—</span>`;
       return`<tr>
         <td class="td-date"><div>${e.date||'—'}</div><div class="td-time">${e.time||''}</div></td>
         <td><span class="cat-badge" style="background:${m.bg};color:${m.color}">${e.cat}</span></td>
@@ -509,98 +466,43 @@ function renderTable(){
       </tr>`;
     }).join('');
   }
-
   document.getElementById('page-info').textContent=total?`${start+1}–${Math.min(start+PER_PAGE,total)} de ${total}`:'0 registros';
   document.getElementById('btn-prev').disabled=page<=1;
   document.getElementById('btn-next').disabled=page>=pages;
-
   const pn=document.getElementById('page-numbers');pn.innerHTML='';
   for(let i=Math.max(1,page-2);i<=Math.min(pages,page+2);i++){
-    const b=document.createElement('button');
-    b.className='page-btn'+(i===page?' active':'');
-    b.textContent=i;b.onclick=(()=>{const n=i;return()=>{page=n;renderTable()}})(i);
-    pn.appendChild(b);
+    const b=document.createElement('button');b.className='page-btn'+(i===page?' active':'');
+    b.textContent=i;b.onclick=(()=>{const n=i;return()=>{page=n;renderTable()}})(i);pn.appendChild(b);
   }
 }
-
 function changePage(dir){page+=dir;renderTable()}
 
-// EXPORTAR EXCEL
 function exportExcel(){
   if(!filtered.length){showToast('Nenhum dado para exportar',true);return}
   const sorted=getSorted();
-
-  // Aba 1: Lançamentos detalhados
-  const rows=sorted.map(e=>({
-    'Data': e.date||'',
-    'Hora': e.time||'',
-    'Categoria': e.cat,
-    'Valor (R$)': e.val,
-    'Foto': e.photo?'Sim':'Não'
-  }));
-
-  // Aba 2: Resumo por categoria
-  const totals={},counts={};
-  sorted.forEach(e=>{totals[e.cat]=(totals[e.cat]||0)+e.val;counts[e.cat]=(counts[e.cat]||0)+1});
-  const catRows=Object.entries(totals).sort((a,b)=>b[1]-a[1]).map(([cat,val])=>({
-    'Categoria': cat,
-    'Total (R$)': val,
-    'Lançamentos': counts[cat],
-    'Ticket Médio (R$)': parseFloat((val/counts[cat]).toFixed(2))
-  }));
-
-  // Aba 3: Resumo mensal
+  const rows=sorted.map(e=>({'Data':e.date||'','Hora':e.time||'','Categoria':e.cat,'Valor (R$)':e.val,'Foto':e.photo?'Sim':'Não'}));
+  const totals={},counts={};sorted.forEach(e=>{totals[e.cat]=(totals[e.cat]||0)+e.val;counts[e.cat]=(counts[e.cat]||0)+1});
+  const catRows=Object.entries(totals).sort((a,b)=>b[1]-a[1]).map(([cat,val])=>({'Categoria':cat,'Total (R$)':val,'Lançamentos':counts[cat],'Ticket Médio (R$)':parseFloat((val/counts[cat]).toFixed(2))}));
   const mTotals={},mCounts={};
-  sorted.forEach(e=>{
-    const d=parseDate(e.date);
-    const k=(d.month<10?'0':'')+d.month+'/'+d.year;
-    mTotals[k]=(mTotals[k]||0)+e.val;mCounts[k]=(mCounts[k]||0)+1;
-  });
-  const monthRows=Object.entries(mTotals).sort((a,b)=>a[0]>b[0]?1:-1).map(([mes,val])=>({
-    'Mês/Ano': mes,
-    'Total (R$)': val,
-    'Lançamentos': mCounts[mes]
-  }));
-
-  // Criar workbook
+  sorted.forEach(e=>{const d=parseDate(e.date);const k=(d.month<10?'0':'')+d.month+'/'+d.year;mTotals[k]=(mTotals[k]||0)+e.val;mCounts[k]=(mCounts[k]||0)+1;});
+  const monthRows=Object.entries(mTotals).sort((a,b)=>a[0]>b[0]?1:-1).map(([mes,val])=>({'Mês/Ano':mes,'Total (R$)':val,'Lançamentos':mCounts[mes]}));
   const wb=XLSX.utils.book_new();
-
-  const ws1=XLSX.utils.json_to_sheet(rows);
-  ws1['!cols']=[{wch:12},{wch:8},{wch:16},{wch:14},{wch:6}];
-  XLSX.utils.book_append_sheet(wb,ws1,'Lançamentos');
-
-  const ws2=XLSX.utils.json_to_sheet(catRows);
-  ws2['!cols']=[{wch:16},{wch:14},{wch:14},{wch:18}];
-  XLSX.utils.book_append_sheet(wb,ws2,'Por Categoria');
-
-  const ws3=XLSX.utils.json_to_sheet(monthRows);
-  ws3['!cols']=[{wch:10},{wch:14},{wch:14}];
-  XLSX.utils.book_append_sheet(wb,ws3,'Por Mês');
-
-  // Nome do arquivo com período
-  const year=document.getElementById('f-year').value;
-  const month=document.getElementById('f-month').value;
-  const cat=document.getElementById('f-cat').value;
-  let fname='despesas';
-  if(year)fname+='-'+year;
-  if(month)fname+='-'+(month<10?'0':'')+month;
-  if(cat)fname+='-'+cat.toLowerCase().replace(/\s/g,'_');
-  fname+='.xlsx';
-
-  XLSX.writeFile(wb,fname);
-  showToast('Excel exportado: '+fname);
+  const ws1=XLSX.utils.json_to_sheet(rows);ws1['!cols']=[{wch:12},{wch:8},{wch:16},{wch:14},{wch:6}];XLSX.utils.book_append_sheet(wb,ws1,'Lançamentos');
+  const ws2=XLSX.utils.json_to_sheet(catRows);ws2['!cols']=[{wch:16},{wch:14},{wch:14},{wch:18}];XLSX.utils.book_append_sheet(wb,ws2,'Por Categoria');
+  const ws3=XLSX.utils.json_to_sheet(monthRows);ws3['!cols']=[{wch:10},{wch:14},{wch:14}];XLSX.utils.book_append_sheet(wb,ws3,'Por Mês');
+  const year=document.getElementById('f-year').value;const month=document.getElementById('f-month').value;const cat=document.getElementById('f-cat').value;
+  let fname='despesas';if(year)fname+='-'+year;if(month)fname+='-'+(month<10?'0':'')+month;if(cat)fname+='-'+cat.toLowerCase().replace(/\s/g,'_');fname+='.xlsx';
+  XLSX.writeFile(wb,fname);showToast('Excel exportado: '+fname);
 }
 
 function openViewer(src){document.getElementById('viewer-img').src=src;document.getElementById('viewer').classList.add('open')}
 function closeViewer(){document.getElementById('viewer').classList.remove('open')}
 document.getElementById('viewer').addEventListener('click',function(e){if(e.target===this)closeViewer()});
 
-// INIT
 if(authToken){
   document.getElementById('auth-wrap').style.display='none';
   document.getElementById('app-wrap').style.display='block';
-  initYears();
-  loadCategorias().then(()=>loadEntries());
+  initYears();loadCategorias().then(()=>loadEntries());
 }
 </script>
 </body>
