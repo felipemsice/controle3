@@ -256,30 +256,58 @@ async function verificarRetorno(){
   const params=new URLSearchParams(window.location.search);
   const status=params.get('status');
   const plano=params.get('plano');
+  // MP retorna payment_id, collection_id ou preference_id
   const paymentId=params.get('payment_id')||params.get('collection_id');
+  const collectionStatus=params.get('collection_status')||params.get('status');
 
-  if(status==='sucesso'&&paymentId&&plano){
-    // Confirmar com backend
+  console.log('MP retorno:', {status, plano, paymentId, collectionStatus, allParams: window.location.search});
+
+  if(!status&&!paymentId)return; // Não veio do MP
+
+  if(!authToken){
+    // Salvar retorno e pedir login
+    sessionStorage.setItem('mp_retorno', window.location.search);
+    showToast('Faça login para confirmar seu pagamento');
+    return;
+  }
+
+  // Verificar se pagamento foi aprovado (status sucesso OU collection_status approved)
+  const aprovado=(status==='sucesso'||collectionStatus==='approved');
+
+  if(aprovado&&plano){
     try{
+      // Tentar confirmar com payment_id se disponível
+      const body=paymentId
+        ?{payment_id:paymentId, plano}
+        :{plano}; // Fallback sem payment_id
+
       const r=await fetch('/api/pagamento/confirmar',{
         method:'POST',
         headers:{'Content-Type':'application/json',Authorization:'Bearer '+authToken},
-        body:JSON.stringify({payment_id:paymentId,plano})
+        body:JSON.stringify(body)
       });
       const d=await r.json();
+      console.log('Confirmar resposta:', d);
       if(d.ok){
         const nomes={basico:'Básico',standard:'Standard',premium:'Premium'};
         document.getElementById('success-msg').textContent=
           `Plano ${nomes[plano]} ativado por 1 ano. Bons registros!`;
         document.getElementById('main-view').classList.add('hidden');
         document.getElementById('success-view').classList.remove('hidden');
+        // Limpar URL
+        window.history.replaceState({},'','/assinar');
         return;
+      } else {
+        console.error('Confirmar falhou:', d);
+        showToast('Erro ao confirmar. Contate o suporte.',true);
       }
-    }catch(e){}
-    showToast('Pagamento recebido — aguarde confirmação.',false);
-  } else if(status==='pendente'){
-    showToast('Pagamento pendente. Confirmaremos em breve.',false);
-  } else if(status==='erro'){
+    }catch(e){
+      console.error('Erro confirmar:', e);
+      showToast('Erro de conexão ao confirmar pagamento.',true);
+    }
+  } else if(status==='pendente'||collectionStatus==='pending'){
+    showToast('Pagamento pendente. Confirmaremos em breve.');
+  } else if(status==='erro'||collectionStatus==='rejected'){
     showToast('Pagamento não aprovado. Tente novamente.',true);
   }
 }
