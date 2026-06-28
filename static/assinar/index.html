@@ -4,77 +4,85 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#0F6E56">
-<title>Assinar — Despesas Pessoais</title>
+<meta name="theme-color" content="#0a0a0f">
+<title>Assinar · NexaPI Despesas</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
 <style>
-:root{--green:#1D9E75;--green-dark:#0F6E56;--green-light:#E1F5EE;--green-mid:#9FE1CB;--red:#D85A30;--red-light:#FAECE7;--amber:#BA7517;--amber-light:#FAEEDA;--text:#1a1a1a;--text-2:#555;--text-3:#999;--bg:#f5f5f3;--surface:#fff;--border:rgba(0,0,0,0.08);--radius:16px;--radius-sm:10px}
-@media(prefers-color-scheme:dark){:root{--text:#f0f0ee;--text-2:#aaa;--text-3:#666;--bg:#141414;--surface:#1e1e1e;--border:rgba(255,255,255,0.08)}}
+:root{--cyan:#00d4ff;--cyan-dark:#0099bb;--cyan-glow:rgba(0,212,255,.15);--cyan-glow2:rgba(0,212,255,.06);--red:#ff4757;--red-light:rgba(255,71,87,.12);--amber:#ffa502;--amber-light:rgba(255,165,2,.12);--text:#f0f0f0;--text-2:#a0a0b0;--text-3:#606070;--bg:#0a0a0f;--bg2:#111118;--surface:#14141e;--surface2:#1e1e2e;--border:rgba(0,212,255,.12);--border2:rgba(255,255,255,.06);--radius:16px;--radius-sm:10px}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',sans-serif;color:var(--text);min-height:100vh}
-
 .wrap{max-width:480px;margin:0 auto;padding:0 0 3rem}
 
-.hero{background:var(--green-dark);border-radius:0 0 28px 28px;padding:env(safe-area-inset-top,16px) 20px 28px;text-align:center}
-.hero-back{display:flex;justify-content:flex-start;margin-bottom:16px;padding-top:8px}
-.back-btn{background:rgba(255,255,255,.12);border:none;color:var(--green-mid);font-size:13px;padding:6px 12px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:6px;font-family:inherit;text-decoration:none}
-.hero-icon{font-size:44px;margin-bottom:10px;display:block}
-.hero h1{font-size:22px;font-weight:700;color:#fff;margin-bottom:6px}
-.hero p{font-size:14px;color:var(--green-mid);line-height:1.5}
+/* HERO */
+.hero{background:linear-gradient(160deg,#0d1117,#060d18);border-bottom:1px solid var(--border);padding:env(safe-area-inset-top,16px) 20px 28px;text-align:center;position:relative;overflow:hidden}
+.hero::before{content:'π';position:absolute;right:-10px;top:-20px;font-size:140px;font-weight:700;color:rgba(0,212,255,.04);line-height:1;pointer-events:none;font-family:serif}
+.hero-back{display:flex;justify-content:flex-start;margin-bottom:20px;padding-top:8px}
+.back-btn{background:rgba(0,212,255,.08);border:1px solid var(--border);color:var(--cyan);font-size:12px;padding:6px 12px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:6px;font-family:inherit;text-decoration:none}
+.hero-icon{font-size:44px;margin-bottom:12px;display:block;color:var(--cyan)}
+.hero h1{font-size:22px;font-weight:700;color:var(--text);margin-bottom:6px}
+.hero p{font-size:14px;color:var(--text-3);line-height:1.5}
 
-/* STATUS BANNER */
-.banner{margin:16px 16px 0;padding:14px 16px;border-radius:var(--radius-sm);display:flex;align-items:center;gap:10px;font-size:14px}
-.banner.trial{background:var(--amber-light);color:var(--amber)}
-.banner.expirado{background:var(--red-light);color:var(--red)}
-.banner.ativo{background:var(--green-light);color:var(--green-dark)}
+/* BANNER */
+.banner{margin:16px 16px 0;padding:14px 16px;border-radius:var(--radius-sm);display:flex;align-items:center;gap:10px;font-size:13px;border:1px solid}
+.banner.trial{background:var(--amber-light);color:var(--amber);border-color:rgba(255,165,2,.3)}
+.banner.expirado{background:var(--red-light);color:var(--red);border-color:rgba(255,71,87,.3)}
+.banner.ativo{background:rgba(0,212,255,.08);color:var(--cyan);border-color:var(--border)}
 .banner i{font-size:20px;flex-shrink:0}
 
 /* PLANOS */
 .section{padding:20px 16px 0}
-.section-title{font-size:15px;font-weight:600;color:var(--text);margin-bottom:14px;text-align:center}
+.section-title{font-size:12px;font-weight:700;color:var(--text-3);margin-bottom:14px;text-align:center;text-transform:uppercase;letter-spacing:.1em}
 
-.plano-card{background:var(--surface);border:2px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:12px;cursor:pointer;transition:border-color .15s,transform .1s;position:relative}
+.plano-card{background:var(--surface);border:2px solid var(--border2);border-radius:var(--radius);padding:20px;margin-bottom:12px;cursor:pointer;transition:border-color .15s,background .15s;position:relative}
 .plano-card:active{transform:scale(.99)}
-.plano-card.selected{border-color:var(--green)}
-.plano-card.popular::before{content:'Mais popular';position:absolute;top:-1px;right:20px;background:var(--green);color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:0 0 8px 8px;letter-spacing:.04em}
-.plano-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
-.plano-nome{font-size:17px;font-weight:700;color:var(--text)}
+.plano-card.selected{border-color:var(--cyan);background:rgba(0,212,255,.04)}
+.plano-card.popular::before{content:'Mais popular';position:absolute;top:-1px;right:20px;background:linear-gradient(135deg,var(--cyan),var(--cyan-dark));color:#000;font-size:10px;font-weight:700;padding:4px 12px;border-radius:0 0 8px 8px;letter-spacing:.05em}
+.plano-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px}
+.plano-nome{font-size:18px;font-weight:700;color:var(--text)}
 .plano-preco{text-align:right}
-.plano-valor{font-size:26px;font-weight:700;color:var(--green);letter-spacing:-.02em}
+.plano-valor{font-size:26px;font-weight:700;color:var(--cyan);letter-spacing:-.02em}
 .plano-periodo{font-size:12px;color:var(--text-3)}
 .plano-mensal{font-size:11px;color:var(--text-3);margin-top:2px}
-.plano-items{list-style:none;display:flex;flex-direction:column;gap:6px}
-.plano-items li{font-size:13px;color:var(--text-2);display:flex;align-items:center;gap:8px}
-.plano-items li i{color:var(--green);font-size:15px;flex-shrink:0}
-.plano-radio{width:20px;height:20px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:border-color .15s}
-.plano-card.selected .plano-radio{border-color:var(--green)}
-.plano-radio-dot{width:10px;height:10px;border-radius:50%;background:var(--green);display:none}
+.plano-radio{width:22px;height:22px;border-radius:50%;border:2px solid var(--border2);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:border-color .15s;margin-right:10px}
+.plano-card.selected .plano-radio{border-color:var(--cyan)}
+.plano-radio-dot{width:10px;height:10px;border-radius:50%;background:var(--cyan);display:none}
 .plano-card.selected .plano-radio-dot{display:block}
+.plano-items{list-style:none;display:flex;flex-direction:column;gap:7px}
+.plano-items li{font-size:13px;color:var(--text-2);display:flex;align-items:center;gap:8px}
+.plano-items li i.ti-check{color:var(--cyan);font-size:14px;flex-shrink:0}
+.plano-items li i.ti-x{color:var(--text-3);font-size:14px;flex-shrink:0}
+.plano-items li.disabled{opacity:.4}
 
 /* PAGAMENTO */
 .pay-section{padding:16px 16px 0}
-.pay-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
-.pay-title{font-size:14px;font-weight:600;color:var(--text-2);margin-bottom:12px;text-transform:uppercase;letter-spacing:.04em}
+.pay-card{background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);padding:16px}
+.pay-title{font-size:11px;font-weight:700;color:var(--text-3);margin-bottom:12px;text-transform:uppercase;letter-spacing:.1em}
 .pay-methods{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px}
-.pay-method{height:44px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg);display:flex;align-items:center;justify-content:center;gap:6px;font-size:13px;font-weight:500;color:var(--text-2)}
-.pay-method i{font-size:18px}
-.pay-btn{width:100%;height:54px;border-radius:var(--radius-sm);border:none;background:var(--green);color:#fff;font-size:17px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:10px;transition:opacity .15s}
+.pay-method{height:44px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg2);display:flex;align-items:center;justify-content:center;gap:6px;font-size:12px;font-weight:500;color:var(--text-3)}
+.pay-method i{font-size:18px;color:var(--cyan)}
+.pay-btn{width:100%;height:54px;border-radius:var(--radius-sm);border:none;background:linear-gradient(135deg,var(--cyan),var(--cyan-dark));color:#000;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:10px;transition:opacity .15s}
 .pay-btn:active{opacity:.85}
-.pay-btn:disabled{opacity:.5;cursor:not-allowed}
-.pay-btn i{font-size:20px}
-.pay-seguro{text-align:center;font-size:12px;color:var(--text-3);margin-top:10px;display:flex;align-items:center;justify-content:center;gap:5px}
+.pay-btn:disabled{opacity:.4;cursor:not-allowed}
+.pay-seguro{text-align:center;font-size:11px;color:var(--text-3);margin-top:10px;display:flex;align-items:center;justify-content:center;gap:5px}
 
 /* SUCESSO */
 .success-wrap{text-align:center;padding:48px 24px}
-.success-icon{font-size:64px;color:var(--green);display:block;margin-bottom:16px}
+.success-icon{font-size:64px;color:var(--cyan);display:block;margin-bottom:16px}
 .success-title{font-size:24px;font-weight:700;color:var(--text);margin-bottom:8px}
 .success-sub{font-size:15px;color:var(--text-2);line-height:1.6;margin-bottom:32px}
-.success-btn{height:52px;padding:0 32px;border-radius:var(--radius-sm);border:none;background:var(--green);color:#fff;font-size:16px;font-weight:600;cursor:pointer;font-family:inherit}
+.success-btn{height:52px;padding:0 32px;border-radius:var(--radius-sm);border:none;background:linear-gradient(135deg,var(--cyan),var(--cyan-dark));color:#000;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit}
 
-.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:#1a1a1a;color:#fff;font-size:14px;font-weight:500;padding:12px 22px;border-radius:999px;white-space:nowrap;transition:transform .3s cubic-bezier(.34,1.56,.64,1),opacity .3s;opacity:0;z-index:999;pointer-events:none}
+/* FOOTER NEXAPI */
+.nexapi-footer{margin:20px 16px 0;padding:16px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-sm);text-align:center}
+.nexapi-footer .pi-brand{font-size:13px;color:var(--cyan);font-weight:600;margin-bottom:4px}
+.nexapi-footer a{font-size:12px;color:var(--text-3);text-decoration:none}
+.nexapi-footer a:hover{color:var(--cyan)}
+
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--surface2);color:var(--cyan);border:1px solid var(--border);font-size:14px;font-weight:500;padding:12px 22px;border-radius:999px;white-space:nowrap;transition:transform .3s cubic-bezier(.34,1.56,.64,1),opacity .3s;opacity:0;z-index:999;pointer-events:none;box-shadow:0 8px 24px var(--cyan-glow)}
 .toast.show{transform:translateX(-50%) translateY(0);opacity:1}
-.toast.error{background:var(--red)}
+.toast.error{background:var(--red-light);color:var(--red);border-color:rgba(255,71,87,.3);box-shadow:none}
 .hidden{display:none}
+@keyframes spin{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
@@ -86,7 +94,7 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
     <div class="success-wrap">
       <i class="ti ti-circle-check success-icon"></i>
       <div class="success-title">Pagamento confirmado!</div>
-      <div class="success-sub" id="success-msg">Seu plano foi ativado com sucesso. Aproveite!</div>
+      <div class="success-sub" id="success-msg">Seu plano foi ativado com sucesso.</div>
       <button class="success-btn" onclick="location.href='/'">Voltar ao app</button>
     </div>
   </div>
@@ -95,7 +103,7 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
   <div id="main-view">
     <div class="hero">
       <div class="hero-back">
-        <a href="/" class="back-btn"><i class="ti ti-arrow-left" style="font-size:14px"></i> Voltar</a>
+        <a href="/" class="back-btn"><i class="ti ti-arrow-left" style="font-size:13px"></i> Voltar</a>
       </div>
       <i class="ti ti-crown hero-icon"></i>
       <h1>Assine e continue</h1>
@@ -109,11 +117,9 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
 
       <div class="plano-card" id="card-basico" onclick="selectPlano('basico')">
         <div class="plano-top">
-          <div>
-            <div style="display:flex;align-items:center;gap:10px">
-              <div class="plano-radio"><div class="plano-radio-dot"></div></div>
-              <div class="plano-nome">Básico</div>
-            </div>
+          <div style="display:flex;align-items:center">
+            <div class="plano-radio"><div class="plano-radio-dot"></div></div>
+            <div class="plano-nome">Básico</div>
           </div>
           <div class="plano-preco">
             <div class="plano-valor">R$ 49,90</div>
@@ -124,19 +130,17 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
         <ul class="plano-items">
           <li><i class="ti ti-check"></i>Até 30 lançamentos por mês</li>
           <li><i class="ti ti-check"></i>Categorias padrão</li>
-          <li style="opacity:.45"><i class="ti ti-x"></i>Sem fotos de comprovantes</li>
-          <li style="opacity:.45"><i class="ti ti-x"></i>Sem relatórios e Excel</li>
-          <li style="opacity:.45"><i class="ti ti-x"></i>Sem categorias personalizadas</li>
+          <li class="disabled"><i class="ti ti-x"></i>Sem fotos de comprovantes</li>
+          <li class="disabled"><i class="ti ti-x"></i>Sem relatórios e Excel</li>
+          <li class="disabled"><i class="ti ti-x"></i>Sem categorias personalizadas</li>
         </ul>
       </div>
 
       <div class="plano-card popular" id="card-standard" onclick="selectPlano('standard')">
         <div class="plano-top">
-          <div>
-            <div style="display:flex;align-items:center;gap:10px">
-              <div class="plano-radio"><div class="plano-radio-dot"></div></div>
-              <div class="plano-nome">Standard</div>
-            </div>
+          <div style="display:flex;align-items:center">
+            <div class="plano-radio"><div class="plano-radio-dot"></div></div>
+            <div class="plano-nome">Standard</div>
           </div>
           <div class="plano-preco">
             <div class="plano-valor">R$ 59,90</div>
@@ -149,17 +153,15 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
           <li><i class="ti ti-check"></i>Fotos de comprovantes</li>
           <li><i class="ti ti-check"></i>Relatórios e exportação Excel</li>
           <li><i class="ti ti-check"></i>Categorias padrão</li>
-          <li style="opacity:.45"><i class="ti ti-x"></i>Sem categorias personalizadas</li>
+          <li class="disabled"><i class="ti ti-x"></i>Sem categorias personalizadas</li>
         </ul>
       </div>
 
       <div class="plano-card" id="card-premium" onclick="selectPlano('premium')">
         <div class="plano-top">
-          <div>
-            <div style="display:flex;align-items:center;gap:10px">
-              <div class="plano-radio"><div class="plano-radio-dot"></div></div>
-              <div class="plano-nome">Premium</div>
-            </div>
+          <div style="display:flex;align-items:center">
+            <div class="plano-radio"><div class="plano-radio-dot"></div></div>
+            <div class="plano-nome">Premium</div>
           </div>
           <div class="plano-preco">
             <div class="plano-valor">R$ 99,90</div>
@@ -187,8 +189,15 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
         <button class="pay-btn" id="pay-btn" onclick="pagar()" disabled>
           <i class="ti ti-lock"></i> Assinar agora
         </button>
-        <div class="pay-seguro"><i class="ti ti-shield-check" style="font-size:14px;color:var(--green)"></i> Pagamento seguro via Mercado Pago</div>
+        <div class="pay-seguro"><i class="ti ti-shield-check" style="font-size:14px;color:var(--cyan)"></i> Pagamento seguro via Mercado Pago</div>
       </div>
+    </div>
+
+    <div class="nexapi-footer">
+      <div class="pi-brand">π NexaPI · Tecnologia &amp; Inovação</div>
+      <a href="https://www.nexapi.com.br" target="_blank">www.nexapi.com.br</a>
+      &nbsp;·&nbsp;
+      <a href="https://wa.me/5511985841189" target="_blank">+55 11 98584-1189</a>
     </div>
   </div>
 
@@ -197,11 +206,11 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
 <div class="toast" id="toast"></div>
 
 <script>
-const authToken = localStorage.getItem('token');
-let planoSelecionado = 'standard';
+const authToken=localStorage.getItem('token');
+let planoSelecionado='standard';
 
 let toastTimer;
-function showToast(msg, isError=false){
+function showToast(msg,isError=false){
   const t=document.getElementById('toast');t.textContent=msg;
   t.className='toast show'+(isError?' error':'');
   clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.className='toast',3000);
@@ -209,9 +218,7 @@ function showToast(msg, isError=false){
 
 function selectPlano(p){
   planoSelecionado=p;
-  ['basico','standard','premium'].forEach(x=>{
-    document.getElementById('card-'+x).classList.toggle('selected', x===p);
-  });
+  ['basico','standard','premium'].forEach(x=>{document.getElementById('card-'+x).classList.toggle('selected',x===p)});
   document.getElementById('pay-btn').disabled=false;
 }
 
@@ -223,9 +230,9 @@ async function loadStatus(){
     const b=document.getElementById('status-banner');
     if(d.status==='trial'){
       b.innerHTML=`<div class="banner trial"><i class="ti ti-clock"></i><span>Você está no período trial — <strong>${d.trial_dias} dias restantes</strong>. Assine antes de expirar!</span></div>`;
-    } else if(d.status==='expirado'){
+    }else if(d.status==='expirado'){
       b.innerHTML=`<div class="banner expirado"><i class="ti ti-alert-circle"></i><span>Seu trial <strong>expirou</strong>. Assine para continuar adicionando lançamentos.</span></div>`;
-    } else if(d.status==='ativo'){
+    }else if(d.status==='ativo'){
       const planos={basico:'Básico',standard:'Standard',premium:'Premium'};
       const end=new Date(d.plano_end).toLocaleDateString('pt-BR');
       b.innerHTML=`<div class="banner ativo"><i class="ti ti-circle-check"></i><span>Plano <strong>${planos[d.plano]}</strong> ativo até ${end}. Você pode fazer upgrade abaixo.</span></div>`;
@@ -239,90 +246,45 @@ async function pagar(){
   btn.disabled=true;
   btn.innerHTML='<i class="ti ti-loader" style="animation:spin .8s linear infinite"></i> Aguarde...';
   try{
-    const r=await fetch('/api/pagamento/criar',{
-      method:'POST',
-      headers:{'Content-Type':'application/json',Authorization:'Bearer '+authToken},
-      body:JSON.stringify({plano:planoSelecionado})
-    });
+    const r=await fetch('/api/pagamento/criar',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+authToken},body:JSON.stringify({plano:planoSelecionado})});
     const d=await r.json();
     if(d.error){showToast(d.error,true);btn.disabled=false;btn.innerHTML='<i class="ti ti-lock"></i> Assinar agora';return}
-    // Redirecionar para o Mercado Pago
     window.location.href=d.init_point;
-  }catch(e){
-    showToast('Erro ao processar. Tente novamente.',true);
-    btn.disabled=false;btn.innerHTML='<i class="ti ti-lock"></i> Assinar agora';
-  }
+  }catch(e){showToast('Erro ao processar.',true);btn.disabled=false;btn.innerHTML='<i class="ti ti-lock"></i> Assinar agora'}
 }
 
 async function verificarRetorno(){
   const params=new URLSearchParams(window.location.search);
-  const status=params.get('status');
-  const plano=params.get('plano');
-  // MP retorna payment_id, collection_id ou preference_id
+  const status=params.get('status');const plano=params.get('plano');
   const paymentId=params.get('payment_id')||params.get('collection_id');
   const collectionStatus=params.get('collection_status')||params.get('status');
-
-  console.log('MP retorno:', {status, plano, paymentId, collectionStatus, allParams: window.location.search});
-
-  if(!status&&!paymentId)return; // Não veio do MP
-
-  if(!authToken){
-    // Salvar retorno e pedir login
-    sessionStorage.setItem('mp_retorno', window.location.search);
-    showToast('Faça login para confirmar seu pagamento');
-    return;
-  }
-
-  // Verificar se pagamento foi aprovado (status sucesso OU collection_status approved)
+  if(!status&&!paymentId)return;
+  if(!authToken){sessionStorage.setItem('mp_retorno',window.location.search);showToast('Faça login para confirmar seu pagamento');return}
   const aprovado=(status==='sucesso'||collectionStatus==='approved');
-
   if(aprovado&&plano){
     try{
-      // Tentar confirmar com payment_id se disponível
-      const body=paymentId
-        ?{payment_id:paymentId, plano}
-        :{plano}; // Fallback sem payment_id
-
-      const r=await fetch('/api/pagamento/confirmar',{
-        method:'POST',
-        headers:{'Content-Type':'application/json',Authorization:'Bearer '+authToken},
-        body:JSON.stringify(body)
-      });
+      const body=paymentId?{payment_id:paymentId,plano}:{plano};
+      const r=await fetch('/api/pagamento/confirmar',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+authToken},body:JSON.stringify(body)});
       const d=await r.json();
-      console.log('Confirmar resposta:', d);
       if(d.ok){
         const nomes={basico:'Básico',standard:'Standard',premium:'Premium'};
-        document.getElementById('success-msg').textContent=
-          `Plano ${nomes[plano]} ativado por 1 ano. Bons registros!`;
+        document.getElementById('success-msg').textContent=`Plano ${nomes[plano]} ativado por 1 ano. Bons registros!`;
         document.getElementById('main-view').classList.add('hidden');
         document.getElementById('success-view').classList.remove('hidden');
-        // Limpar URL
-        window.history.replaceState({},'','/assinar');
-        return;
-      } else {
-        console.error('Confirmar falhou:', d);
-        showToast('Erro ao confirmar. Contate o suporte.',true);
+        window.history.replaceState({},'','/assinar');return;
       }
-    }catch(e){
-      console.error('Erro confirmar:', e);
-      showToast('Erro de conexão ao confirmar pagamento.',true);
-    }
-  } else if(status==='pendente'||collectionStatus==='pending'){
+    }catch(e){}
+    showToast('Pagamento recebido — aguarde confirmação.');
+  }else if(status==='pendente'||collectionStatus==='pending'){
     showToast('Pagamento pendente. Confirmaremos em breve.');
-  } else if(status==='erro'||collectionStatus==='rejected'){
+  }else if(status==='erro'||collectionStatus==='rejected'){
     showToast('Pagamento não aprovado. Tente novamente.',true);
   }
 }
 
-// Selecionar standard por padrão
 selectPlano('standard');
 loadStatus();
 verificarRetorno();
-
-// CSS spin
-const style=document.createElement('style');
-style.textContent='@keyframes spin{to{transform:rotate(360deg)}}';
-document.head.appendChild(style);
 </script>
 </body>
 </html>
