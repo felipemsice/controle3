@@ -233,11 +233,16 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
 <!-- CADASTRO -->
 <div class="screen" id="screen-register">
   <div class="auth-card">
-    <div class="auth-logo"><i class="ti ti-user-plus"></i><h1>Criar conta</h1><p>Preencha seus dados</p></div>
+    <div class="auth-logo">
+      <div class="nx-icon"><i class="ti ti-user-plus"></i></div>
+      <h1>Criar conta</h1>
+      <p>30 dias grátis para explorar</p>
+    </div>
     <div class="err" id="reg-err"></div>
     <div class="suc" id="reg-suc"></div>
-    <div class="field"><label>Nome</label><input type="text" id="reg-name" placeholder="Seu nome" autocomplete="name"></div>
-    <div class="field"><label>Telefone (WhatsApp)</label><input type="tel" id="reg-phone" placeholder="(11) 99999-9999" inputmode="tel"><div class="hint">Você receberá um SMS com o código</div></div>
+    <div class="field"><label>Nome</label><input type="text" id="reg-name" placeholder="Seu nome completo" autocomplete="name"></div>
+    <div class="field"><label>Telefone (WhatsApp)</label><input type="tel" id="reg-phone" placeholder="(11) 99999-9999" inputmode="tel"><div class="hint">Com DDD, sem espaços</div></div>
+    <div class="field"><label>E-mail</label><input type="email" id="reg-email" placeholder="seu@email.com" autocomplete="email"><div class="hint">Receberá o código de verificação</div></div>
     <div class="field"><label>Senha</label><input type="password" id="reg-pw" placeholder="Mínimo 6 caracteres" autocomplete="new-password"></div>
     <button class="btn btn-primary" onclick="doRegister()">Criar conta</button>
     <div class="divider"></div>
@@ -245,12 +250,16 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
   </div>
 </div>
 
-<!-- VERIFICAR SMS -->
+<!-- VERIFICAR EMAIL -->
 <div class="screen" id="screen-verify">
   <div class="auth-card">
-    <div class="auth-logo"><i class="ti ti-device-mobile-message"></i><h1>Confirme seu número</h1><p id="verify-hint">Digite o código enviado por SMS</p></div>
+    <div class="auth-logo">
+      <div class="nx-icon"><i class="ti ti-mail-check"></i></div>
+      <h1>Verifique seu email</h1>
+      <p id="verify-hint">Digite o código enviado para seu email</p>
+    </div>
     <div class="err" id="verify-err"></div>
-    <div class="field"><input class="code-input" type="text" id="verify-code" placeholder="000000" maxlength="6" inputmode="numeric" autocomplete="one-time-code"></div>
+    <div class="field"><input class="code-input" type="text" id="verify-code" placeholder="000000" maxlength="6" inputmode="numeric" autocomplete="one-time-code" style="color:var(--cyan)"></div>
     <button class="btn btn-primary" onclick="doVerify()">Confirmar</button>
     <div class="divider"></div>
     <button class="btn-ghost" onclick="show('screen-login')">← Voltar ao login</button>
@@ -684,7 +693,15 @@ async function doLogin(){
   const pw=document.getElementById('login-pw').value;
   try{
     const d=await api('/api/auth/login',{method:'POST',body:JSON.stringify({phone,password:pw})});
-    if(d.error){showErr('login-err',d.error);return}
+    if(d.error){
+      if(d.unverified){
+        pendingPhone=phone;
+        show('screen-verify');
+        document.getElementById('verify-hint').textContent='Código reenviado para seu email';
+        return;
+      }
+      showErr('login-err',d.error);return;
+    }
     authToken=d.token;userName=d.name;
     localStorage.setItem('token',authToken);localStorage.setItem('uname',userName);
     showApp();
@@ -695,14 +712,15 @@ async function doRegister(){
   hideErr('reg-err');
   const name=document.getElementById('reg-name').value.trim();
   const phone=document.getElementById('reg-phone').value;
+  const email=document.getElementById('reg-email').value.trim();
   const pw=document.getElementById('reg-pw').value;
+  if(!email||!email.includes('@')){showErr('reg-err','Digite um email válido');return}
   try{
-    const d=await api('/api/auth/register',{method:'POST',body:JSON.stringify({name,phone,password:pw})});
+    const d=await api('/api/auth/register',{method:'POST',body:JSON.stringify({name,phone,email,password:pw})});
     if(d.error){showErr('reg-err',d.error);return}
-    // Login direto — sem SMS
-    authToken=d.token;userName=d.name;
-    localStorage.setItem('token',authToken);localStorage.setItem('uname',userName);
-    showApp();
+    pendingPhone=phone;
+    show('screen-verify');
+    document.getElementById('verify-hint').textContent='Código enviado para '+email;
   }catch(e){showErr('reg-err','Erro de conexão')}
 }
 
