@@ -226,7 +226,7 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
       <div><div class="hero-user" id="hero-user"></div><h1>Despesas pessoais</h1></div>
       <div style="display:flex;align-items:center;gap:8px">
         <span class="hero-badge" id="month-label"></span>
-        <a href="/relatorios" style="background:rgba(255,255,255,.12);border:none;color:var(--green-mid);font-size:12px;padding:6px 10px;border-radius:8px;cursor:pointer;text-decoration:none;display:flex;align-items:center;gap:4px"><i class="ti ti-chart-bar" style="font-size:14px"></i></a>
+        <a href="/relatorios" onclick="return checkRelatorios(event)" style="background:rgba(255,255,255,.12);border:none;color:var(--green-mid);font-size:12px;padding:6px 10px;border-radius:8px;cursor:pointer;text-decoration:none;display:flex;align-items:center;gap:4px"><i class="ti ti-chart-bar" style="font-size:14px"></i></a>
         <button class="logout-btn" onclick="doLogout()"><i class="ti ti-logout" style="font-size:14px"></i></button>
       </div>
     </div>
@@ -239,6 +239,33 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
     </div>
   </div>
   <div id="status-banner"></div>
+
+  <!-- MODAL LIMITE DE PLANO -->
+  <div class="modal-overlay" id="limite-modal">
+    <div class="modal" style="text-align:center;padding:28px 24px 24px">
+      <div style="font-size:48px;margin-bottom:8px" id="limite-icon">⚠️</div>
+      <div style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:8px" id="limite-titulo">Limite atingido</div>
+      <div style="font-size:14px;color:var(--text-2);line-height:1.6;margin-bottom:8px" id="limite-msg"></div>
+      <div style="font-size:13px;color:var(--text-3);margin-bottom:20px" id="limite-sub"></div>
+      <a href="/assinar" style="display:flex;width:100%;height:50px;border-radius:var(--radius-sm);border:none;background:var(--green);color:#fff;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;text-decoration:none;align-items:center;justify-content:center;gap:8px;margin-bottom:10px">
+        <i class="ti ti-crown" style="font-size:17px"></i> Ver planos de assinatura
+      </a>
+      <button onclick="closeLimiteModal()" style="width:100%;height:44px;border-radius:var(--radius-sm);border:1px solid var(--border);background:none;color:var(--text-3);font-size:14px;cursor:pointer;font-family:inherit">Fechar</button>
+    </div>
+  </div>
+
+  <!-- MODAL UPGRADE -->
+  <div class="modal-overlay" id="upgrade-modal">
+    <div class="modal" style="text-align:center;padding:28px 24px 24px">
+      <div style="font-size:40px;margin-bottom:8px">🔒</div>
+      <div style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:8px" id="upgrade-titulo">Recurso não disponível</div>
+      <div style="font-size:14px;color:var(--text-2);line-height:1.6;margin-bottom:20px" id="upgrade-msg"></div>
+      <a href="/assinar" style="display:flex;width:100%;height:50px;border-radius:var(--radius-sm);border:none;background:var(--green);color:#fff;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;text-decoration:none;align-items:center;justify-content:center;gap:8px;margin-bottom:10px">
+        <i class="ti ti-crown" style="font-size:17px"></i> Ver plano <span id="upgrade-plano"></span>
+      </a>
+      <button onclick="closeUpgradeModal()" style="width:100%;height:44px;border-radius:var(--radius-sm);border:1px solid var(--border);background:none;color:var(--text-3);font-size:14px;cursor:pointer;font-family:inherit">Fechar</button>
+    </div>
+  </div>
 
   <!-- MODAL BOAS-VINDAS TRIAL (primeiro login) -->
   <div class="modal-overlay" id="trial-modal">
@@ -431,7 +458,60 @@ function renderStatusBanner(){
   }
 }
 
-// MODAL TRIAL (primeiro login)
+function showLimiteAlert(tipo, uso, limite){
+  const s=contaStatus||{};
+  const planosNome={basico:'Básico',standard:'Standard',premium:'Premium',trial:'Trial'};
+  const nomePlano=s.status==='trial'?'Trial':(planosNome[s.plano]||s.plano||'atual');
+
+  if(tipo==='expirado'){
+    document.getElementById('limite-icon').textContent='🔒';
+    document.getElementById('limite-titulo').textContent='Período expirado';
+    document.getElementById('limite-msg').textContent='Seu período de acesso expirou. Assine um plano para continuar adicionando lançamentos.';
+    document.getElementById('limite-sub').textContent='Seus lançamentos existentes continuam disponíveis para consulta.';
+  } else {
+    const usoAtual=uso!==undefined?uso:(s.uso_mes||0);
+    const limiteAtual=limite!==undefined?limite:(s.limite||0);
+    document.getElementById('limite-icon').textContent='📊';
+    document.getElementById('limite-titulo').textContent='Limite do mês atingido';
+    if(s.status==='trial'){
+      document.getElementById('limite-msg').textContent=
+        `Você atingiu o limite de ${limiteAtual} lançamentos do período trial (${usoAtual}/${limiteAtual}).`;
+      document.getElementById('limite-sub').textContent=
+        'Assine um plano para continuar registrando suas despesas e ter acesso a todos os recursos.';
+    } else {
+      document.getElementById('limite-msg').textContent=
+        `Você atingiu o limite de ${limiteAtual} lançamentos/mês do plano ${nomePlano} (${usoAtual}/${limiteAtual}).`;
+      document.getElementById('limite-sub').textContent=
+        'Faça upgrade para um plano superior e continue registrando suas despesas.';
+    }
+  }
+  document.getElementById('limite-modal').classList.add('open');
+}
+function closeLimiteModal(){document.getElementById('limite-modal').classList.remove('open')}
+document.getElementById('limite-modal').addEventListener('click',function(e){if(e.target===this)closeLimiteModal()});
+
+function checkRelatorios(e){
+  if(contaStatus&&!contaStatus.relatorios){
+    e.preventDefault();
+    showUpgradeAlert('relatorios','Relatórios e exportação Excel','standard');
+    return false;
+  }
+  return true;
+}
+
+// UPGRADE ALERT
+function showUpgradeAlert(recurso, nomeRecurso, planoMinimo){
+  const nomes={standard:'Standard',premium:'Premium'};
+  const precos={standard:'R$ 59,90/ano',premium:'R$ 99,90/ano'};
+  document.getElementById('upgrade-titulo').textContent=nomeRecurso+' não disponível';
+  document.getElementById('upgrade-msg').textContent=
+    `Este recurso está disponível a partir do plano ${nomes[planoMinimo]} (${precos[planoMinimo]}).`;
+  document.getElementById('upgrade-plano').textContent=`Plano ${nomes[planoMinimo]}`;
+  document.getElementById('upgrade-modal').classList.add('open');
+}
+function closeUpgradeModal(){document.getElementById('upgrade-modal').classList.remove('open')}
+document.getElementById('upgrade-modal').addEventListener('click',function(e){if(e.target===this)closeUpgradeModal()});
+
 function showTrialModal(dias){
   document.getElementById('trial-modal-dias').textContent=dias+' dias';
   document.getElementById('trial-modal').classList.add('open');
@@ -528,32 +608,21 @@ async function addEntry(cat,val){
   // Verificar plano antes de adicionar
   if(contaStatus){
     if(!contaStatus.pode_adicionar){
-      showToast('Plano expirado — assine para continuar',true);
-      setTimeout(()=>location.href='/assinar',1500);return;
+      showLimiteAlert('expirado');return;
     }
-    if(contaStatus.status==='ativo'&&contaStatus.uso_mes>=contaStatus.limite){
-      showToast('Limite do mês atingido — faça upgrade',true);
-      setTimeout(()=>location.href='/assinar',1500);return;
+    if((contaStatus.status==='ativo'||contaStatus.status==='trial')&&contaStatus.uso_mes>=contaStatus.limite){
+      showLimiteAlert('limite');return;
     }
   }
   const entry={cat,val:parseFloat(val),...getNow()};
   try{
     const d=await api('/api/despesas',{method:'POST',body:JSON.stringify(entry)});
-    if(d.error==='plano_expirado'){showToast('Plano expirado — assine para continuar',true);setTimeout(()=>location.href='/assinar',1500);return}
-    if(d.error==='limite_atingido'){showToast(`Limite de ${d.limite} lançamentos/mês atingido`,true);setTimeout(()=>location.href='/assinar',1500);return}
+    if(d.error==='plano_expirado'){showLimiteAlert('expirado');return}
+    if(d.error==='limite_atingido'){showLimiteAlert('limite',d.uso,d.limite);return}
     if(!d.ok)throw new Error();
     entry.id=d.id;entries.unshift(entry);
-    if(contaStatus&&contaStatus.uso_mes!==undefined){contaStatus.uso_mes++;renderStatusBanner()}
+    if(contaStatus&&contaStatus.uso_mes!==undefined){contaStatus.uso_mes++;renderStatusBanner();renderHeroTrial();}
     render();showToast(cat+': '+fmtR(parseFloat(val))+' salvo');
-  }catch(e){showToast('Erro ao salvar',true)}
-}
-
-async function addEntry(cat,val){
-  const entry={cat,val:parseFloat(val),...getNow()};
-  try{
-    const d=await api('/api/despesas',{method:'POST',body:JSON.stringify(entry)});
-    if(!d.ok)throw new Error();
-    entry.id=d.id;entries.unshift(entry);render();showToast(cat+': '+fmtR(parseFloat(val))+' salvo');
   }catch(e){showToast('Erro ao salvar',true)}
 }
 
@@ -616,8 +685,17 @@ function handleFile(input){
 }
 async function savePhoto(){
   if(!pendingPhotoBase64||!currentPhotoEntryId)return;
+  // Verificar permissão de fotos
+  if(contaStatus&&!contaStatus.fotos){
+    closeModal();
+    showUpgradeAlert('fotos','Fotos de comprovantes','standard');
+    return;
+  }
   try{
     const d=await api('/api/photo',{method:'POST',body:JSON.stringify({id:currentPhotoEntryId,image:pendingPhotoBase64})});
+    if(d.error==='sem_permissao'){
+      closeModal();showUpgradeAlert('fotos','Fotos de comprovantes','standard');return;
+    }
     if(d.ok){
       const e=entries.find(x=>x.id===currentPhotoEntryId);
       if(e){e.photo=d.photo;e.photo_inline=pendingPhotoBase64;}
@@ -731,15 +809,21 @@ async function addCategoria(){
   const err=document.getElementById('cat-err');
   err.classList.remove('show');
   if(!nome){err.textContent='Digite um nome para a categoria';err.classList.add('show');return}
+  // Verificar permissão
+  if(contaStatus&&!contaStatus.categorias_custom){
+    closeCatModal();
+    showUpgradeAlert('categorias_custom','Categorias personalizadas','premium');
+    return;
+  }
   const cor=CAT_CORES[selectedCor];
   try{
     const d=await api('/api/categorias',{method:'POST',body:JSON.stringify({nome,icone:'ti-tag',cor_bg:cor.bg,cor_text:cor.color,cor_bar:cor.bar})});
+    if(d.error==='sem_permissao'){closeCatModal();showUpgradeAlert('categorias_custom','Categorias personalizadas','premium');return}
     if(d.error){err.textContent=d.error;err.classList.add('show');return}
     customCats.push({id:d.id,nome,icone:'ti-tag',cor_bg:cor.bg,cor_text:cor.color,cor_bar:cor.bar});
     CAT_META[nome]={bg:cor.bg,color:cor.color,icon:'ti-tag',bar:cor.bar};
     document.getElementById('cat-add-input').value='';
-    rebuildCatSelect();
-    renderCatList();
+    rebuildCatSelect();renderCatList();
     showToast('Categoria "'+nome+'" criada!');
   }catch(e){err.textContent='Erro ao criar categoria';err.classList.add('show')}
 }
