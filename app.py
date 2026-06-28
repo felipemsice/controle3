@@ -22,9 +22,21 @@ SUPABASE_URL    = os.environ.get('SUPABASE_URL', '')
 SUPABASE_KEY    = os.environ.get('SUPABASE_KEY', '')  # service_role key
 
 PLANOS = {
-    'basico':   {'nome': 'Básico',   'limite': 100,  'preco': 49.00},
-    'standard': {'nome': 'Standard', 'limite': 200,  'preco': 60.00},
-    'premium':  {'nome': 'Premium',  'limite': 500,  'preco': 100.00},
+    'basico': {
+        'nome': 'Básico', 'limite': 30, 'preco': 49.90,
+        'fotos': False, 'relatorios': False, 'categorias_custom': False,
+        'descricao': 'Até 30 lançamentos/mês'
+    },
+    'standard': {
+        'nome': 'Standard', 'limite': 100, 'preco': 59.90,
+        'fotos': True, 'relatorios': True, 'categorias_custom': False,
+        'descricao': 'Até 100 lançamentos/mês'
+    },
+    'premium': {
+        'nome': 'Premium', 'limite': 500, 'preco': 99.90,
+        'fotos': True, 'relatorios': True, 'categorias_custom': True,
+        'descricao': 'Até 500 lançamentos/mês'
+    },
 }
 
 # ── SUPABASE CLIENT ──────────────────────────────────────
@@ -66,13 +78,13 @@ def make_token(user_id, role='user'):
 
 def get_plano_status(user):
     if str(user.get('phone','')) == ADM_PHONE:
-        return {'status': 'adm', 'pode_adicionar': True, 'limite': 9999, 'uso_mes': 0}
+        return {'status': 'adm', 'pode_adicionar': True, 'limite': 9999, 'uso_mes': 0,
+                'fotos': True, 'relatorios': True, 'categorias_custom': True}
 
     def dt_to_naive(s):
         if not s: return None
         s = str(s).replace('Z','+00:00')
         try:
-            from datetime import timezone
             dt = datetime.fromisoformat(s)
             if dt.tzinfo: return dt.replace(tzinfo=None)
             return dt
@@ -80,21 +92,31 @@ def get_plano_status(user):
 
     now = datetime.utcnow()
 
+    # Plano pago tem prioridade
     plano     = user.get('plano')
     plano_end = dt_to_naive(user.get('plano_end'))
     if plano and plano_end and now < plano_end:
         dias = (plano_end - now).days
-        return {'status': 'ativo', 'plano': plano, 'pode_adicionar': True,
-                'limite': PLANOS[plano]['limite'], 'plano_end': str(plano_end),
-                'plano_dias': dias, 'nome': PLANOS[plano]['nome']}
+        p    = PLANOS.get(plano, {})
+        return {
+            'status': 'ativo', 'plano': plano, 'pode_adicionar': True,
+            'limite': p.get('limite', 100), 'plano_end': str(plano_end),
+            'plano_dias': dias, 'nome': p.get('nome', plano),
+            'fotos': p.get('fotos', False),
+            'relatorios': p.get('relatorios', False),
+            'categorias_custom': p.get('categorias_custom', False),
+        }
 
+    # Trial: acesso limitado a 10 lançamentos/mês
     trial_end = dt_to_naive(user.get('trial_end'))
     if trial_end and now < trial_end:
         dias = (trial_end - now).days
-        return {'status': 'trial', 'pode_adicionar': True, 'limite': 9999,
-                'uso_mes': 0, 'trial_dias': dias}
+        return {'status': 'trial', 'pode_adicionar': True, 'limite': 10,
+                'uso_mes': 0, 'trial_dias': dias,
+                'fotos': True, 'relatorios': True, 'categorias_custom': True}
 
-    return {'status': 'expirado', 'pode_adicionar': False, 'limite': 0, 'uso_mes': 0}
+    return {'status': 'expirado', 'pode_adicionar': False, 'limite': 0, 'uso_mes': 0,
+            'fotos': False, 'relatorios': False, 'categorias_custom': False}
 
 def count_mes_atual(user_id):
     sb  = get_sb()
@@ -248,7 +270,13 @@ def add_categoria():
     nome = d.get('nome','').strip()
     if not nome: return jsonify({'error': 'Nome obrigatório'}), 400
     if nome in CATS_PADRAO: return jsonify({'error': 'Categoria já existe'}), 409
-    sb = get_sb()
+    sb  = get_sb()
+    res = sb.table('users').select('*').eq('id', g.user_id).execute()
+    user = res.data[0] if res.data else {}
+    ps   = get_plano_status(user)
+    if not ps.get('categorias_custom', False):
+        return jsonify({'error': 'sem_permissao', 'recurso': 'categorias_custom',
+                        'plano_minimo': 'premium'}), 403
     existing = sb.table('categorias').select('id').eq('user_id', g.user_id).eq('nome', nome).execute()
     if existing.data: return jsonify({'error': 'Categoria já existe'}), 409
     res = sb.table('categorias').insert({
@@ -297,7 +325,8 @@ def add_despesa():
     ps   = get_plano_status(user)
     if not ps['pode_adicionar']:
         return jsonify({'error': 'plano_expirado', 'status': ps['status']}), 403
-    if ps['status'] == 'ativo':
+    # Verificar limite para plano ativo E trial
+    if ps['status'] in ('ativo', 'trial'):
         uso = count_mes_atual(g.user_id)
         if uso >= ps['limite']:
             return jsonify({'error': 'limite_atingido', 'uso': uso, 'limite': ps['limite']}), 403
@@ -343,6 +372,14 @@ def upload_photo():
     eid     = d.get('id')
     img_b64 = d.get('image','')
     sb      = get_sb()
+    # Verificar permissão de fotos
+    if img_b64:
+        res  = sb.table('users').select('*').eq('id', g.user_id).execute()
+        user = res.data[0] if res.data else {}
+        ps   = get_plano_status(user)
+        if not ps.get('fotos', False):
+            return jsonify({'error': 'sem_permissao', 'recurso': 'fotos',
+                            'plano_minimo': 'standard'}), 403
     row     = sb.table('despesas').select('*').eq('id', eid).eq('user_id', g.user_id).execute()
     if not row.data: return jsonify({'error': 'Não encontrado'}), 404
     e = row.data[0]
