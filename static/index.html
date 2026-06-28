@@ -573,8 +573,11 @@ function render(){
   const lc=document.getElementById('list-container');
   if(!entries.length){lc.innerHTML='<div class="entries-card"><div class="empty"><i class="ti ti-receipt-off"></i>Nenhum lançamento ainda</div></div>';return}
   lc.innerHTML='<div class="entries-card">'+entries.map(e=>{
-    const m=CAT_META[e.cat]||CAT_META['Outros'];const hp=!!e.photo;
-    return`<div class="entry"><div class="entry-icon" style="background:${m.bg}"><i class="ti ${m.icon}" style="color:${m.color}"></i></div><div class="entry-body"><div class="entry-cat">${e.cat}</div><div class="entry-dt"><span><i class="ti ti-calendar" style="font-size:11px;vertical-align:-1px"></i> ${e.date}</span><span><i class="ti ti-clock" style="font-size:11px;vertical-align:-1px"></i> ${e.time}</span></div></div><div class="entry-actions"><span class="entry-amount">${fmtR(e.val)}</span><button class="photo-btn${hp?' has-photo':''}" onclick="openModal(${e.id})">${hp?`<img src="/api/photo/${e.photo}" alt="">`:'<i class="ti ti-camera-plus"></i>'}</button><button class="del-btn" onclick="deleteEntry(${e.id})"><i class="ti ti-trash"></i></button></div></div>`;
+    const m=CAT_META[e.cat]||CAT_META['Outros'];
+    // photo_inline = base64 direto; photo = referência (só válida se não começa com db:)
+    const imgSrc=e.photo_inline||(e.photo&&!e.photo.startsWith('db:')?`/api/photo/${e.photo}`:null);
+    const hp=!!imgSrc;
+    return`<div class="entry"><div class="entry-icon" style="background:${m.bg}"><i class="ti ${m.icon}" style="color:${m.color}"></i></div><div class="entry-body"><div class="entry-cat">${e.cat}</div><div class="entry-dt"><span><i class="ti ti-calendar" style="font-size:11px;vertical-align:-1px"></i> ${e.date}</span><span><i class="ti ti-clock" style="font-size:11px;vertical-align:-1px"></i> ${e.time}</span></div></div><div class="entry-actions"><span class="entry-amount">${fmtR(e.val)}</span><button class="photo-btn${hp?' has-photo':''}" onclick="openModal(${e.id})">${hp?`<img src="${imgSrc}" alt="">`:'<i class="ti ti-camera-plus"></i>'}</button><button class="del-btn" onclick="deleteEntry(${e.id})"><i class="ti ti-trash"></i></button></div></div>`;
   }).join('')+'</div>';
   const ct={};entries.forEach(e=>{ct[e.cat]=(ct[e.cat]||0)+e.val});
   const sorted=Object.entries(ct).sort((a,b)=>b[1]-a[1]);
@@ -589,8 +592,14 @@ function openModal(eid){
   const e=entries.find(x=>x.id===eid);
   const prev=document.getElementById('modal-preview');
   const rb=document.getElementById('modal-remove-btn'),sb=document.getElementById('modal-save-btn');
-  if(e&&e.photo){prev.innerHTML=`<img src="/api/photo/${e.photo}" onclick="openViewer('/api/photo/${e.photo}')" style="cursor:zoom-in">`;rb.style.display='';sb.style.display='none'}
-  else{prev.innerHTML='<div class="placeholder"><i class="ti ti-photo"></i>Nenhuma foto ainda</div>';rb.style.display='none';sb.style.display=''}
+  const imgSrc=e&&(e.photo_inline||(e.photo&&!e.photo.startsWith('db:')?`/api/photo/${e.photo}`:null));
+  if(imgSrc){
+    prev.innerHTML=`<img src="${imgSrc}" onclick="openViewer('${imgSrc}')" style="cursor:zoom-in">`;
+    rb.style.display='';sb.style.display='none';
+  }else{
+    prev.innerHTML='<div class="placeholder"><i class="ti ti-photo"></i>Nenhuma foto ainda</div>';
+    rb.style.display='none';sb.style.display='';
+  }
   document.getElementById('photo-modal').classList.add('open');
 }
 function closeModal(){document.getElementById('photo-modal').classList.remove('open')}
@@ -604,10 +613,22 @@ function handleFile(input){
 }
 async function savePhoto(){
   if(!pendingPhotoBase64||!currentPhotoEntryId)return;
-  try{const d=await api('/api/photo',{method:'POST',body:JSON.stringify({id:currentPhotoEntryId,image:pendingPhotoBase64})});if(d.ok){const e=entries.find(x=>x.id===currentPhotoEntryId);if(e)e.photo=d.photo;showToast('Foto salva!');closeModal();render()}}catch(e){showToast('Erro',true)}
+  try{
+    const d=await api('/api/photo',{method:'POST',body:JSON.stringify({id:currentPhotoEntryId,image:pendingPhotoBase64})});
+    if(d.ok){
+      const e=entries.find(x=>x.id===currentPhotoEntryId);
+      if(e){e.photo=d.photo;e.photo_inline=pendingPhotoBase64;}
+      showToast('Foto salva!');closeModal();render();
+    }
+  }catch(e){showToast('Erro ao salvar foto',true)}
 }
 async function removePhoto(){
-  try{await api('/api/photo',{method:'POST',body:JSON.stringify({id:currentPhotoEntryId,image:''})});const e=entries.find(x=>x.id===currentPhotoEntryId);if(e)delete e.photo;showToast('Foto removida');closeModal();render()}catch(e){showToast('Erro',true)}
+  try{
+    await api('/api/photo',{method:'POST',body:JSON.stringify({id:currentPhotoEntryId,image:''})});
+    const e=entries.find(x=>x.id===currentPhotoEntryId);
+    if(e){delete e.photo;delete e.photo_inline;}
+    showToast('Foto removida');closeModal();render();
+  }catch(e){showToast('Erro',true)}
 }
 function openViewer(src){document.getElementById('viewer-img').src=src;document.getElementById('photo-viewer').classList.add('open')}
 function closeViewer(){document.getElementById('photo-viewer').classList.remove('open')}
