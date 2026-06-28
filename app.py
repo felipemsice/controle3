@@ -65,21 +65,35 @@ def make_token(user_id, role='user'):
     return jwt.encode(payload, SECRET_KEY, algorithm='HS256')
 
 def get_plano_status(user):
-    now = datetime.utcnow().isoformat()
     if str(user.get('phone','')) == ADM_PHONE:
         return {'status': 'adm', 'pode_adicionar': True, 'limite': 9999, 'uso_mes': 0}
+
+    def dt_to_naive(s):
+        if not s: return None
+        s = str(s).replace('Z','+00:00')
+        try:
+            from datetime import timezone
+            dt = datetime.fromisoformat(s)
+            if dt.tzinfo: return dt.replace(tzinfo=None)
+            return dt
+        except: return None
+
+    now = datetime.utcnow()
+
     plano     = user.get('plano')
-    plano_end = user.get('plano_end')
+    plano_end = dt_to_naive(user.get('plano_end'))
     if plano and plano_end and now < plano_end:
-        dias = (datetime.fromisoformat(plano_end) - datetime.utcnow()).days
+        dias = (plano_end - now).days
         return {'status': 'ativo', 'plano': plano, 'pode_adicionar': True,
-                'limite': PLANOS[plano]['limite'], 'plano_end': plano_end,
+                'limite': PLANOS[plano]['limite'], 'plano_end': str(plano_end),
                 'plano_dias': dias, 'nome': PLANOS[plano]['nome']}
-    trial_end = user.get('trial_end')
+
+    trial_end = dt_to_naive(user.get('trial_end'))
     if trial_end and now < trial_end:
-        dias = (datetime.fromisoformat(trial_end) - datetime.utcnow()).days
+        dias = (trial_end - now).days
         return {'status': 'trial', 'pode_adicionar': True, 'limite': 9999,
                 'uso_mes': 0, 'trial_dias': dias}
+
     return {'status': 'expirado', 'pode_adicionar': False, 'limite': 0, 'uso_mes': 0}
 
 def count_mes_atual(user_id):
