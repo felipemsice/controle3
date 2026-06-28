@@ -1,25 +1,24 @@
-import os, hashlib, base64, json
+import os, hashlib, base64, json, secrets, string
 from datetime import datetime, timedelta
 from functools import wraps
 from flask import Flask, request, jsonify, send_from_directory, g, Response
 import jwt
-from twilio.rest import Client
 import mercadopago
+import requests as http_requests
 from supabase import create_client, Client as SupabaseClient
 
 app = Flask(__name__, static_folder='static')
 
 # ── CONFIG ───────────────────────────────────────────────
 SECRET_KEY      = os.environ.get('SECRET_KEY', 'dev-secret')
-TWILIO_SID      = os.environ.get('TWILIO_SID', '')
-TWILIO_TOKEN    = os.environ.get('TWILIO_TOKEN', '')
-TWILIO_VERIFY   = os.environ.get('TWILIO_VERIFY', '')
 ADM_PHONE       = os.environ.get('ADM_PHONE', '')
 ADM_PASSWORD    = os.environ.get('ADM_PASSWORD', 'Admin@2025!')
 MP_ACCESS_TOKEN = os.environ.get('MP_ACCESS_TOKEN', '')
 APP_URL         = os.environ.get('APP_URL', 'https://controle3.onrender.com')
 SUPABASE_URL    = os.environ.get('SUPABASE_URL', '')
-SUPABASE_KEY    = os.environ.get('SUPABASE_KEY', '')  # service_role key
+SUPABASE_KEY    = os.environ.get('SUPABASE_KEY', '')
+RESEND_API_KEY  = os.environ.get('RESEND_API_KEY', '')
+EMAIL_FROM      = os.environ.get('EMAIL_FROM', 'noreply@nexapi.com.br')
 
 PLANOS = {
     'basico': {
@@ -71,6 +70,69 @@ def check_sms_code(phone, code):
 
 def mp_sdk():
     return mercadopago.SDK(MP_ACCESS_TOKEN)
+
+# ── EMAIL (Resend) ────────────────────────────────────────
+def gerar_codigo():
+    return ''.join(secrets.choice(string.digits) for _ in range(6))
+
+def send_email(to, subject, html):
+    try:
+        r = http_requests.post(
+            'https://api.resend.com/emails',
+            headers={'Authorization': f'Bearer {RESEND_API_KEY}', 'Content-Type': 'application/json'},
+            json={'from': f'Despesas Pessoais <{EMAIL_FROM}>', 'to': [to], 'subject': subject, 'html': html}
+        )
+        return r.status_code == 200
+    except Exception as e:
+        print(f"Erro email: {e}"); return False
+
+def email_verificacao(to, nome, codigo):
+    html = f"""
+    <div style="font-family:sans-serif;max-width:480px;margin:0 auto;background:#0a0a0f;color:#f0f0f0;border-radius:12px;padding:32px;border:1px solid rgba(0,212,255,.2)">
+      <div style="text-align:center;margin-bottom:24px">
+        <div style="font-size:28px;font-weight:700;color:#00d4ff">π NexaPI</div>
+        <div style="font-size:13px;color:#606070;margin-top:4px">Despesas Pessoais</div>
+      </div>
+      <h2 style="font-size:20px;font-weight:600;color:#fff;margin-bottom:8px">Olá, {nome}!</h2>
+      <p style="color:#a0a0b0;font-size:14px;line-height:1.6;margin-bottom:24px">
+        Use o código abaixo para verificar seu e-mail e ativar sua conta:
+      </p>
+      <div style="background:#14141e;border:1px solid rgba(0,212,255,.3);border-radius:10px;padding:20px;text-align:center;margin-bottom:24px">
+        <div style="font-size:36px;font-weight:700;color:#00d4ff;letter-spacing:10px">{codigo}</div>
+        <div style="font-size:12px;color:#606070;margin-top:8px">Válido por 15 minutos</div>
+      </div>
+      <p style="color:#606070;font-size:12px;text-align:center">
+        Se não criou uma conta no Despesas Pessoais, ignore este email.
+      </p>
+      <div style="border-top:1px solid rgba(255,255,255,.06);margin-top:24px;padding-top:16px;text-align:center">
+        <a href="https://www.nexapi.com.br" style="color:#00d4ff;font-size:12px;text-decoration:none">www.nexapi.com.br</a>
+      </div>
+    </div>"""
+    return send_email(to, 'Código de verificação — Despesas Pessoais', html)
+
+def email_reset_senha(to, nome, codigo):
+    html = f"""
+    <div style="font-family:sans-serif;max-width:480px;margin:0 auto;background:#0a0a0f;color:#f0f0f0;border-radius:12px;padding:32px;border:1px solid rgba(0,212,255,.2)">
+      <div style="text-align:center;margin-bottom:24px">
+        <div style="font-size:28px;font-weight:700;color:#00d4ff">π NexaPI</div>
+        <div style="font-size:13px;color:#606070;margin-top:4px">Despesas Pessoais</div>
+      </div>
+      <h2 style="font-size:20px;font-weight:600;color:#fff;margin-bottom:8px">Redefinir senha</h2>
+      <p style="color:#a0a0b0;font-size:14px;line-height:1.6;margin-bottom:24px">
+        Olá {nome}, use o código abaixo para redefinir sua senha:
+      </p>
+      <div style="background:#14141e;border:1px solid rgba(255,165,2,.3);border-radius:10px;padding:20px;text-align:center;margin-bottom:24px">
+        <div style="font-size:36px;font-weight:700;color:#ffa502;letter-spacing:10px">{codigo}</div>
+        <div style="font-size:12px;color:#606070;margin-top:8px">Válido por 15 minutos</div>
+      </div>
+      <p style="color:#606070;font-size:12px;text-align:center">
+        Se não solicitou a redefinição, ignore este email.
+      </p>
+      <div style="border-top:1px solid rgba(255,255,255,.06);margin-top:24px;padding-top:16px;text-align:center">
+        <a href="https://www.nexapi.com.br" style="color:#00d4ff;font-size:12px;text-decoration:none">www.nexapi.com.br</a>
+      </div>
+    </div>"""
+    return send_email(to, 'Redefinir senha — Despesas Pessoais', html)
 
 def make_token(user_id, role='user'):
     payload = {'sub': user_id, 'role': role, 'exp': datetime.utcnow() + timedelta(days=30)}
@@ -179,33 +241,51 @@ def register():
     d     = request.get_json()
     name  = d.get('name','').strip()
     phone = fmt_phone(d.get('phone',''))
+    email = d.get('email','').strip().lower()
     pw    = d.get('password','')
-    if not name or not phone or not pw:
+    if not name or not phone or not pw or not email:
         return jsonify({'error': 'Preencha todos os campos'}), 400
     if len(pw) < 6:
         return jsonify({'error': 'Senha mínimo 6 caracteres'}), 400
     sb = get_sb()
-    existing = sb.table('users').select('id').eq('phone', phone).execute()
+    existing = sb.table('users').select('id,verified').eq('phone', phone).execute()
     if existing.data:
-        return jsonify({'error': 'Telefone já cadastrado'}), 409
+        user = existing.data[0]
+        if user['verified']:
+            return jsonify({'error': 'Telefone já cadastrado'}), 409
+        # Reenviar código
+        codigo = gerar_codigo()
+        exp    = (datetime.utcnow() + timedelta(minutes=15)).isoformat()
+        sb.table('users').update({'verify_code': codigo, 'verify_exp': exp, 'email': email}).eq('id', user['id']).execute()
+        email_verificacao(email, name, codigo)
+        return jsonify({'ok': True, 'message': 'Código reenviado por email'})
     trial_end = (datetime.utcnow() + timedelta(days=30)).isoformat()
+    codigo    = gerar_codigo()
+    exp       = (datetime.utcnow() + timedelta(minutes=15)).isoformat()
     res = sb.table('users').insert({
-        'name': name, 'phone': phone,
+        'name': name, 'phone': phone, 'email': email,
         'password': hash_password(pw),
-        'trial_end': trial_end, 'verified': True, 'active': True
+        'trial_end': trial_end, 'verified': False, 'active': True,
+        'verify_code': codigo, 'verify_exp': exp
     }).execute()
-    user = res.data[0]
-    return jsonify({'ok': True, 'token': make_token(user['id']), 'name': user['name']})
+    email_verificacao(email, name, codigo)
+    return jsonify({'ok': True, 'message': 'Código enviado por email'})
 
 @app.route('/api/auth/verify', methods=['POST'])
 def verify_phone():
-    d     = request.get_json()
-    phone = fmt_phone(d.get('phone',''))
-    sb    = get_sb()
-    sb.table('users').update({'verified': True}).eq('phone', phone).execute()
-    user = sb.table('users').select('*').eq('phone', phone).execute().data
-    if not user: return jsonify({'error': 'Usuário não encontrado'}), 404
-    user = user[0]
+    d      = request.get_json()
+    phone  = fmt_phone(d.get('phone',''))
+    codigo = d.get('code','').strip()
+    sb     = get_sb()
+    res    = sb.table('users').select('*').eq('phone', phone).execute()
+    if not res.data: return jsonify({'error': 'Usuário não encontrado'}), 404
+    user = res.data[0]
+    now  = datetime.utcnow().isoformat()
+    if user.get('verify_code') != codigo:
+        return jsonify({'error': 'Código incorreto'}), 400
+    if user.get('verify_exp') and now > user['verify_exp']:
+        return jsonify({'error': 'Código expirado. Faça novo cadastro.'}), 400
+    sb.table('users').update({'verified': True, 'verify_code': None, 'verify_exp': None}).eq('id', user['id']).execute()
     return jsonify({'ok': True, 'token': make_token(user['id']), 'name': user['name']})
 
 @app.route('/api/auth/login', methods=['POST'])
@@ -219,22 +299,53 @@ def login():
     user = res.data[0]
     if user['password'] != hash_password(pw):
         return jsonify({'error': 'Telefone ou senha incorretos'}), 401
+    if not user.get('verified'):
+        # Reenviar código se tiver email
+        if user.get('email'):
+            codigo = gerar_codigo()
+            exp    = (datetime.utcnow() + timedelta(minutes=15)).isoformat()
+            sb.table('users').update({'verify_code': codigo, 'verify_exp': exp}).eq('id', user['id']).execute()
+            email_verificacao(user['email'], user['name'], codigo)
+        return jsonify({'error': 'Verifique seu email', 'unverified': True}), 403
     if not user.get('active', True):
         return jsonify({'error': 'Conta desativada'}), 403
     return jsonify({'ok': True, 'token': make_token(user['id']), 'name': user['name']})
 
 @app.route('/api/auth/forgot', methods=['POST'])
 def forgot():
-    return jsonify({'ok': True, 'message': 'Entre em contato com o administrador.'})
+    d     = request.get_json()
+    phone = fmt_phone(d.get('phone',''))
+    sb    = get_sb()
+    res   = sb.table('users').select('*').eq('phone', phone).execute()
+    if not res.data: return jsonify({'ok': True})  # Não revelar se existe
+    user   = res.data[0]
+    if not user.get('email'): return jsonify({'error': 'Sem email cadastrado'}), 400
+    codigo = gerar_codigo()
+    exp    = (datetime.utcnow() + timedelta(minutes=15)).isoformat()
+    sb.table('users').update({'verify_code': codigo, 'verify_exp': exp}).eq('id', user['id']).execute()
+    email_reset_senha(user['email'], user['name'], codigo)
+    return jsonify({'ok': True})
 
 @app.route('/api/auth/reset', methods=['POST'])
 def reset_password():
     d      = request.get_json()
     phone  = fmt_phone(d.get('phone',''))
+    codigo = d.get('code','').strip()
     new_pw = d.get('password','')
     if len(new_pw) < 6: return jsonify({'error': 'Senha mínimo 6 caracteres'}), 400
-    sb = get_sb()
-    sb.table('users').update({'password': hash_password(new_pw)}).eq('phone', phone).execute()
+    sb  = get_sb()
+    res = sb.table('users').select('*').eq('phone', phone).execute()
+    if not res.data: return jsonify({'error': 'Usuário não encontrado'}), 404
+    user = res.data[0]
+    now  = datetime.utcnow().isoformat()
+    if user.get('verify_code') != codigo:
+        return jsonify({'error': 'Código incorreto'}), 400
+    if user.get('verify_exp') and now > user['verify_exp']:
+        return jsonify({'error': 'Código expirado'}), 400
+    sb.table('users').update({
+        'password': hash_password(new_pw),
+        'verify_code': None, 'verify_exp': None
+    }).eq('id', user['id']).execute()
     return jsonify({'ok': True})
 
 # ── STATUS DA CONTA ──────────────────────────────────────
