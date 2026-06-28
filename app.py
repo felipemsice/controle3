@@ -359,7 +359,15 @@ def delete_categoria(cid):
 def get_despesas():
     db   = get_db()
     rows = db.execute('SELECT * FROM despesas WHERE user_id=? ORDER BY ts DESC', (g.user_id,)).fetchall()
-    return jsonify([dict(r) for r in rows])
+    result = []
+    for r in rows:
+        e = dict(r)
+        # Incluir foto como data URL inline para evitar segunda requisição
+        if e.get('photo_data'):
+            e['photo_inline'] = 'data:image/jpeg;base64,' + e['photo_data']
+        e.pop('photo_data', None)  # Não expor o campo raw
+        result.append(e)
+    return jsonify(result)
 
 @app.route('/api/despesas', methods=['POST'])
 @require_auth
@@ -424,16 +432,12 @@ def upload_photo():
     ).fetchone()
     if not row: return jsonify({'error': 'Não encontrado'}), 404
     if not img_b64:
-        # Remover foto
         db.execute('UPDATE despesas SET photo=NULL, photo_data=NULL WHERE id=?', (eid,))
         db.commit()
         return jsonify({'ok': True})
-    # Garantir que está no formato data URL completo
-    if not img_b64.startswith('data:'):
-        img_b64 = 'data:image/jpeg;base64,' + img_b64
-    # Comprimir: manter só base64 puro no banco, reconstituir data URL na saída
+    # Guardar base64 puro no banco
     b64_puro = img_b64.split(',')[1] if ',' in img_b64 else img_b64
-    ref = f"db:{g.user_id}_{eid}"
+    ref = f"db_{g.user_id}_{eid}"
     db.execute(
         'UPDATE despesas SET photo=?, photo_data=? WHERE id=?',
         (ref, b64_puro, eid)
@@ -441,16 +445,17 @@ def upload_photo():
     db.commit()
     return jsonify({'ok': True, 'photo': ref})
 
-@app.route('/api/photo/<path:ref>', methods=['GET'])
+@app.route('/api/photo/<ref>', methods=['GET'])
 @require_auth
 def get_photo(ref):
+    from flask import Response
     db = get_db()
-    # Novo formato: db:userid_entryid
-    if ref.startswith('db:'):
-        parts = ref[3:].split('_')
-        if str(g.user_id) != parts[0]:
+    # Novo formato: db_userid_entryid
+    if ref.startswith('db_'):
+        parts = ref.split('_')  # ['db', 'userid', 'entryid']
+        if len(parts) < 3 or str(g.user_id) != parts[1]:
             return jsonify({'error': 'Acesso negado'}), 403
-        eid = parts[1]
+        eid = parts[2]
         row = db.execute(
             'SELECT photo_data FROM despesas WHERE id=? AND user_id=?',
             (eid, g.user_id)
@@ -458,9 +463,9 @@ def get_photo(ref):
         if not row or not row['photo_data']:
             return '', 404
         img_bytes = base64.b64decode(row['photo_data'])
-        from flask import Response
-        return Response(img_bytes, mimetype='image/jpeg')
-    # Formato antigo: arquivo em disco (fallback)
+        return Response(img_bytes, mimetype='image/jpeg',
+                       headers={'Cache-Control': 'max-age=86400'})
+    # Formato legado: userid_entryid.jpg (arquivo em disco)
     if not ref.startswith(f"{g.user_id}_"):
         return jsonify({'error': 'Acesso negado'}), 403
     photo_path = os.path.join(PHOTOS_DIR, ref)
