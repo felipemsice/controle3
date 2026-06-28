@@ -340,6 +340,20 @@ def add_despesa():
     }).execute()
     return jsonify({'ok': True, 'id': ins.data[0]['id']})
 
+@app.route('/api/despesas/<int:eid>', methods=['PUT'])
+@require_auth
+def edit_despesa(eid):
+    sb  = get_sb()
+    row = sb.table('despesas').select('*').eq('id', eid).eq('user_id', g.user_id).execute()
+    if not row.data: return jsonify({'error': 'Não encontrado'}), 404
+    d   = request.get_json()
+    obs = (d.get('obs') or '').strip()[:300]
+    sb.table('despesas').update({
+        'cat': d['cat'], 'val': float(d['val']),
+        'obs': obs if obs else None
+    }).eq('id', eid).execute()
+    return jsonify({'ok': True})
+
 @app.route('/api/despesas/<int:eid>', methods=['DELETE'])
 @require_auth
 def delete_despesa(eid):
@@ -365,6 +379,113 @@ def clear_despesas():
         except: pass
     sb.table('despesas').delete().eq('user_id', g.user_id).execute()
     return jsonify({'ok': True})
+
+# ── RECEITAS ─────────────────────────────────────────────
+@app.route('/api/receitas', methods=['GET'])
+@require_auth
+def get_receitas():
+    sb   = get_sb()
+    rows = sb.table('receitas').select('*').eq('user_id', g.user_id).order('ts', desc=True).execute()
+    return jsonify(rows.data or [])
+
+@app.route('/api/receitas', methods=['POST'])
+@require_auth
+def add_receita():
+    d   = request.get_json()
+    sb  = get_sb()
+    obs = (d.get('obs') or '').strip()[:300]
+    ins = sb.table('receitas').insert({
+        'user_id': g.user_id,
+        'descricao': d.get('desc','Receita'), 'val': float(d['val']),
+        'date': d.get('date'), 'time': d.get('time'), 'ts': d.get('ts'),
+        'obs': obs if obs else None
+    }).execute()
+    return jsonify({'ok': True, 'id': ins.data[0]['id']})
+
+@app.route('/api/receitas/<int:rid>', methods=['DELETE'])
+@require_auth
+def delete_receita(rid):
+    sb  = get_sb()
+    row = sb.table('receitas').select('id').eq('id', rid).eq('user_id', g.user_id).execute()
+    if not row.data: return jsonify({'error': 'Não encontrado'}), 404
+    sb.table('receitas').delete().eq('id', rid).execute()
+    return jsonify({'ok': True})
+
+# ── METAS ─────────────────────────────────────────────────
+@app.route('/api/metas', methods=['GET'])
+@require_auth
+def get_metas():
+    sb   = get_sb()
+    rows = sb.table('metas').select('*').eq('user_id', g.user_id).execute()
+    return jsonify(rows.data or [])
+
+@app.route('/api/metas', methods=['POST'])
+@require_auth
+def save_meta():
+    d   = request.get_json()
+    cat = d.get('cat','').strip()
+    val = float(d.get('val', 0))
+    if not cat or val <= 0: return jsonify({'error': 'Dados inválidos'}), 400
+    sb  = get_sb()
+    existing = sb.table('metas').select('id').eq('user_id', g.user_id).eq('cat', cat).execute()
+    if existing.data:
+        sb.table('metas').update({'val': val}).eq('id', existing.data[0]['id']).execute()
+    else:
+        sb.table('metas').insert({'user_id': g.user_id, 'cat': cat, 'val': val}).execute()
+    return jsonify({'ok': True})
+
+@app.route('/api/metas/<cat>', methods=['DELETE'])
+@require_auth
+def delete_meta(cat):
+    sb = get_sb()
+    sb.table('metas').delete().eq('user_id', g.user_id).eq('cat', cat).execute()
+    return jsonify({'ok': True})
+
+# ── CUPONS ────────────────────────────────────────────────
+@app.route('/api/cupom/validar', methods=['POST'])
+@require_auth
+def validar_cupom():
+    d    = request.get_json()
+    code = d.get('code','').strip().upper()
+    sb   = get_sb()
+    row  = sb.table('cupons').select('*').eq('code', code).eq('ativo', True).execute()
+    if not row.data: return jsonify({'error': 'Cupom inválido ou expirado'}), 404
+    cupom = row.data[0]
+    if cupom.get('usos_max') and cupom.get('usos_atual', 0) >= cupom['usos_max']:
+        return jsonify({'error': 'Cupom esgotado'}), 410
+    return jsonify({'ok': True, 'desconto': cupom['desconto'], 'tipo': cupom.get('tipo','pct')})
+
+@app.route('/api/adm/cupons', methods=['GET'])
+@require_adm
+def adm_get_cupons():
+    sb   = get_sb()
+    rows = sb.table('cupons').select('*').order('criado', desc=True).execute()
+    return jsonify(rows.data or [])
+
+@app.route('/api/adm/cupons', methods=['POST'])
+@require_adm
+def adm_create_cupom():
+    d  = request.get_json()
+    sb = get_sb()
+    sb.table('cupons').insert({
+        'code':     d.get('code','').strip().upper(),
+        'desconto': float(d.get('desconto', 10)),
+        'tipo':     d.get('tipo', 'pct'),
+        'usos_max': d.get('usos_max'),
+        'usos_atual': 0,
+        'ativo':    True
+    }).execute()
+    return jsonify({'ok': True})
+
+@app.route('/api/adm/cupons/<code>/toggle', methods=['POST'])
+@require_adm
+def adm_toggle_cupom(code):
+    sb  = get_sb()
+    row = sb.table('cupons').select('ativo').eq('code', code).execute()
+    if not row.data: return jsonify({'error': 'Não encontrado'}), 404
+    new = not row.data[0]['ativo']
+    sb.table('cupons').update({'ativo': new}).eq('code', code).execute()
+    return jsonify({'ok': True, 'ativo': new})
 
 # ── OBSERVAÇÃO ───────────────────────────────────────────
 @app.route('/api/obs', methods=['POST'])
