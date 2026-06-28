@@ -388,20 +388,23 @@ function renderHeroTrial(){
       <span>Trial: <span class="trial-pill-dias">${dias} dia${dias===1?'':'s'}</span> restante${dias===1?'':'s'}</span>
       <a href="/assinar">Assinar →</a>
     </div>`;
+  } else if(s.status==='ativo'){
+    const dias=s.plano_dias||0;
+    const uso=s.uso_mes||0;const lim=s.limite;
+    const urgente=dias<=30;
+    const nomes={basico:'Básico',standard:'Standard',premium:'Premium'};
+    el.style.display='block';
+    inner.innerHTML=`<div class="trial-pill${urgente?' urgente':''}">
+      <i class="ti ti-crown"></i>
+      <span>Plano ${nomes[s.plano]||s.plano} · ${uso}/${lim} lançamentos · <strong>${dias} dia${dias===1?'':'s'}</strong></span>
+      ${urgente?`<a href="/assinar">Renovar →</a>`:''}
+    </div>`;
   } else if(s.status==='expirado'){
     el.style.display='block';
     inner.innerHTML=`<div class="trial-pill urgente">
       <i class="ti ti-lock"></i>
-      <span>Trial expirado — somente leitura</span>
+      <span>Plano expirado — somente leitura</span>
       <a href="/assinar">Assinar →</a>
-    </div>`;
-  } else if(s.status==='ativo'){
-    const uso=s.uso_mes||0;const lim=s.limite;
-    el.style.display='block';
-    inner.innerHTML=`<div class="trial-pill">
-      <i class="ti ti-chart-donut"></i>
-      <span>${uso} de ${lim} lançamentos este mês</span>
-      ${uso/lim>=0.8?`<a href="/assinar">Upgrade →</a>`:''}
     </div>`;
   } else {
     el.style.display='none';
