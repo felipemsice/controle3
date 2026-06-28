@@ -206,7 +206,7 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
       <p>Controle financeiro inteligente</p>
     </div>
     <div class="err" id="login-err"></div>
-    <div class="field"><label>Telefone (WhatsApp)</label><input type="tel" id="login-phone" placeholder="(11) 99999-9999" inputmode="tel" autocomplete="tel"><div class="hint">Com DDD, sem espaços</div></div>
+    <div class="field"><label>E-mail</label><input type="email" id="login-email" placeholder="seu@email.com" autocomplete="email" inputmode="email"></div>
     <div class="field"><label>Senha</label><input type="password" id="login-pw" placeholder="••••••" autocomplete="current-password"></div>
     <button class="btn btn-primary" onclick="doLogin()">Entrar</button>
     <div class="divider">ou</div>
@@ -241,7 +241,6 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
     <div class="err" id="reg-err"></div>
     <div class="suc" id="reg-suc"></div>
     <div class="field"><label>Nome</label><input type="text" id="reg-name" placeholder="Seu nome completo" autocomplete="name"></div>
-    <div class="field"><label>Telefone (WhatsApp)</label><input type="tel" id="reg-phone" placeholder="(11) 99999-9999" inputmode="tel"><div class="hint">Com DDD, sem espaços</div></div>
     <div class="field"><label>E-mail</label><input type="email" id="reg-email" placeholder="seu@email.com" autocomplete="email"><div class="hint">Receberá o código de verificação</div></div>
     <div class="field"><label>Senha</label><input type="password" id="reg-pw" placeholder="Mínimo 6 caracteres" autocomplete="new-password"></div>
     <button class="btn btn-primary" onclick="doRegister()">Criar conta</button>
@@ -269,10 +268,14 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
 <!-- RECUPERAR SENHA -->
 <div class="screen" id="screen-forgot">
   <div class="auth-card">
-    <div class="auth-logo"><i class="ti ti-lock-open"></i><h1>Recuperar senha</h1><p>Enviaremos um código por SMS</p></div>
+    <div class="auth-logo">
+      <div class="nx-icon"><i class="ti ti-lock-open"></i></div>
+      <h1>Recuperar senha</h1>
+      <p>Enviaremos um código para seu email</p>
+    </div>
     <div class="err" id="forgot-err"></div>
     <div class="suc" id="forgot-suc"></div>
-    <div class="field"><label>Telefone</label><input type="tel" id="forgot-phone" placeholder="(11) 99999-9999" inputmode="tel"></div>
+    <div class="field"><label>E-mail</label><input type="email" id="forgot-email" placeholder="seu@email.com" inputmode="email" autocomplete="email"></div>
     <button class="btn btn-primary" onclick="doForgot()">Enviar código</button>
     <div class="divider"></div>
     <button class="btn-ghost" onclick="show('screen-reset')">Já tenho o código</button>
@@ -283,9 +286,13 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
 <!-- NOVA SENHA -->
 <div class="screen" id="screen-reset">
   <div class="auth-card">
-    <div class="auth-logo"><i class="ti ti-key"></i><h1>Nova senha</h1><p>Digite o código recebido e sua nova senha</p></div>
+    <div class="auth-logo">
+      <div class="nx-icon"><i class="ti ti-key"></i></div>
+      <h1>Nova senha</h1>
+      <p>Digite o código recebido e sua nova senha</p>
+    </div>
     <div class="err" id="reset-err"></div>
-    <div class="field"><label>Telefone</label><input type="tel" id="reset-phone" placeholder="(11) 99999-9999" inputmode="tel"></div>
+    <div class="field"><label>E-mail</label><input type="email" id="reset-email" placeholder="seu@email.com" autocomplete="email"></div>
     <div class="field"><input class="code-input" type="text" id="reset-code" placeholder="000000" maxlength="6" inputmode="numeric"></div>
     <div class="field"><label>Nova senha</label><input type="password" id="reset-pw" placeholder="Mínimo 6 caracteres"></div>
     <button class="btn btn-primary" onclick="doReset()">Redefinir senha</button>
@@ -540,9 +547,9 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
 <script>
 const CAT_META={'Combustível':{bg:'#E1F5EE',color:'#085041',icon:'ti-gas-station'},'Alimentação':{bg:'#E6F1FB',color:'#042C53',icon:'ti-tools-kitchen-2'},'Lazer':{bg:'#FAEEDA',color:'#412402',icon:'ti-device-gamepad-2'},'Saúde':{bg:'#FAECE7',color:'#4A1B0C',icon:'ti-heart-rate-monitor'},'Transporte':{bg:'#EEEDFE',color:'#26215C',icon:'ti-bus'},'Moradia':{bg:'#EAF3DE',color:'#173404',icon:'ti-home-2'},'Educação':{bg:'#FBEAF0',color:'#4B1528',icon:'ti-book'},'Vestuário':{bg:'#F1EFE8',color:'#2C2C2A',icon:'ti-hanger'},'Outros':{bg:'#F1EFE8',color:'#444441',icon:'ti-dots'}};
 const BAR_COLORS=['#1D9E75','#378ADD','#BA7517','#D85A30','#534AB7','#639922','#993556','#5F5E5A'];
-let entries=[],receitas=[],metas=[],authToken=localStorage.getItem('token'),userName=localStorage.getItem('uname'),pendingPhone='',currentPhotoEntryId=null,pendingPhotoBase64=null;
+let entries=[],receitas=[],metas=[],authToken=localStorage.getItem('token'),userName=localStorage.getItem('uname'),pendingEmail='',currentPhotoEntryId=null,pendingPhotoBase64=null;
 let contaStatus=null;
-let tipoLanc='despesa'; // 'despesa' ou 'receita'
+let tipoLanc='despesa';
 
 function fmtR(v){return'R$ '+v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}
 function getNow(){const n=new Date();return{date:n.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit'}),time:n.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),ts:n.getTime()}}
@@ -689,15 +696,15 @@ function closeTrialModal(){
 
 async function doLogin(){
   hideErr('login-err');
-  const phone=document.getElementById('login-phone').value;
+  const email=document.getElementById('login-email').value.trim().toLowerCase();
   const pw=document.getElementById('login-pw').value;
   try{
-    const d=await api('/api/auth/login',{method:'POST',body:JSON.stringify({phone,password:pw})});
+    const d=await api('/api/auth/login',{method:'POST',body:JSON.stringify({email,password:pw})});
     if(d.error){
       if(d.unverified){
-        pendingPhone=phone;
+        pendingEmail=d.email||email;
         show('screen-verify');
-        document.getElementById('verify-hint').textContent='Código reenviado para seu email';
+        document.getElementById('verify-hint').textContent='Código reenviado para '+pendingEmail;
         return;
       }
       showErr('login-err',d.error);return;
@@ -711,14 +718,13 @@ async function doLogin(){
 async function doRegister(){
   hideErr('reg-err');
   const name=document.getElementById('reg-name').value.trim();
-  const phone=document.getElementById('reg-phone').value;
-  const email=document.getElementById('reg-email').value.trim();
+  const email=document.getElementById('reg-email').value.trim().toLowerCase();
   const pw=document.getElementById('reg-pw').value;
   if(!email||!email.includes('@')){showErr('reg-err','Digite um email válido');return}
   try{
-    const d=await api('/api/auth/register',{method:'POST',body:JSON.stringify({name,phone,email,password:pw})});
+    const d=await api('/api/auth/register',{method:'POST',body:JSON.stringify({name,email,password:pw})});
     if(d.error){showErr('reg-err',d.error);return}
-    pendingPhone=phone;
+    pendingEmail=email;
     show('screen-verify');
     document.getElementById('verify-hint').textContent='Código enviado para '+email;
   }catch(e){showErr('reg-err','Erro de conexão')}
@@ -728,7 +734,7 @@ async function doVerify(){
   hideErr('verify-err');
   const code=document.getElementById('verify-code').value.trim();
   try{
-    const d=await api('/api/auth/verify',{method:'POST',body:JSON.stringify({phone:pendingPhone,code})});
+    const d=await api('/api/auth/verify',{method:'POST',body:JSON.stringify({email:pendingEmail,code})});
     if(d.error){showErr('verify-err',d.error);return}
     authToken=d.token;userName=d.name;
     localStorage.setItem('token',authToken);localStorage.setItem('uname',userName);showApp();
@@ -737,22 +743,24 @@ async function doVerify(){
 
 async function doForgot(){
   hideErr('forgot-err');
-  const phone=document.getElementById('forgot-phone').value;
+  const email=document.getElementById('forgot-email').value.trim().toLowerCase();
+  if(!email){showErr('forgot-err','Digite seu email');return}
   try{
-    await api('/api/auth/forgot',{method:'POST',body:JSON.stringify({phone})});
-    showSuc('forgot-suc','Código SMS enviado!');
-    document.getElementById('reset-phone').value=phone;
+    await api('/api/auth/forgot',{method:'POST',body:JSON.stringify({email})});
+    pendingEmail=email;
+    document.getElementById('reset-email').value=email;
+    showSuc('forgot-suc','Código enviado! Verifique seu email.');
     setTimeout(()=>show('screen-reset'),1500);
   }catch(e){showErr('forgot-err','Erro de conexão')}
 }
 
 async function doReset(){
   hideErr('reset-err');
-  const phone=document.getElementById('reset-phone').value;
+  const email=document.getElementById('reset-email').value.trim().toLowerCase();
   const code=document.getElementById('reset-code').value.trim();
   const pw=document.getElementById('reset-pw').value;
   try{
-    const d=await api('/api/auth/reset',{method:'POST',body:JSON.stringify({phone,code,password:pw})});
+    const d=await api('/api/auth/reset',{method:'POST',body:JSON.stringify({email,code,password:pw})});
     if(d.error){showErr('reset-err',d.error);return}
     showToast('Senha redefinida! Faça login.');show('screen-login');
   }catch(e){showErr('reset-err','Erro de conexão')}
