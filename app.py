@@ -23,19 +23,19 @@ SUPABASE_KEY    = os.environ.get('SUPABASE_KEY', '')  # service_role key
 
 PLANOS = {
     'basico': {
-        'nome': 'Básico', 'limite': 30, 'preco': 49.90,
+        'nome': 'Básico', 'limite': 50, 'preco': 39.90,
         'fotos': False, 'relatorios': False, 'categorias_custom': False,
-        'descricao': 'Até 30 lançamentos/mês'
+        'descricao': 'Até 50 lançamentos/mês'
     },
     'standard': {
-        'nome': 'Standard', 'limite': 100, 'preco': 59.90,
+        'nome': 'Standard', 'limite': 150, 'preco': 69.90,
         'fotos': True, 'relatorios': True, 'categorias_custom': False,
-        'descricao': 'Até 100 lançamentos/mês'
+        'descricao': 'Até 150 lançamentos/mês'
     },
     'premium': {
-        'nome': 'Premium', 'limite': 500, 'preco': 99.90,
+        'nome': 'Premium', 'limite': 999999, 'preco': 119.90,
         'fotos': True, 'relatorios': True, 'categorias_custom': True,
-        'descricao': 'Até 500 lançamentos/mês'
+        'descricao': 'Lançamentos ilimitados'
     },
 }
 
@@ -325,8 +325,8 @@ def add_despesa():
     ps   = get_plano_status(user)
     if not ps['pode_adicionar']:
         return jsonify({'error': 'plano_expirado', 'status': ps['status']}), 403
-    # Verificar limite para plano ativo E trial
-    if ps['status'] in ('ativo', 'trial'):
+    # Verificar limite para plano ativo E trial (premium é ilimitado)
+    if ps['status'] in ('ativo', 'trial') and ps.get('limite', 0) < 999999:
         uso = count_mes_atual(g.user_id)
         if uso >= ps['limite']:
             return jsonify({'error': 'limite_atingido', 'uso': uso, 'limite': ps['limite']}), 403
