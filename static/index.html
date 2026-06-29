@@ -135,6 +135,21 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
 .photo-btn.has-photo.has-obs{border-color:var(--cyan);background:rgba(0,212,255,.08);color:var(--cyan)}
 .photo-btn img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:9px}
 .entry-obs{font-size:11px;color:var(--text-3);margin-top:3px;font-style:italic;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px}
+
+/* RECORRENTES E PARCELAS */
+.rec-list{background:var(--surface);border-radius:var(--radius);border:1px solid var(--border2);overflow:hidden}
+.rec-item{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--border2)}
+.rec-item:last-child{border-bottom:none}
+.rec-badge{font-size:10px;font-weight:700;padding:3px 8px;border-radius:999px;white-space:nowrap;flex-shrink:0}
+.rec-badge.recorrente{background:rgba(0,212,255,.12);color:var(--cyan);border:1px solid var(--border)}
+.rec-badge.parcela{background:rgba(255,165,2,.12);color:var(--amber);border:1px solid rgba(255,165,2,.3)}
+.rec-info{flex:1;min-width:0}
+.rec-nome{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rec-sub{font-size:11px;color:var(--text-3);margin-top:2px}
+.rec-val{font-size:14px;font-weight:700;color:var(--cyan);flex-shrink:0}
+.rec-del{width:30px;height:30px;border-radius:8px;background:none;border:none;cursor:pointer;color:var(--text-3);font-size:15px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.rec-del:active{color:var(--red);background:var(--red-light)}
+.empty-rec{text-align:center;padding:16px;color:var(--text-3);font-size:13px}
 #modal-obs:focus{outline:none;border-color:var(--cyan);box-shadow:0 0 0 3px var(--cyan-glow)}
 .del-btn{width:36px;height:36px;border-radius:10px;background:none;border:none;cursor:pointer;color:var(--text-3);font-size:17px;display:flex;align-items:center;justify-content:center}
 .del-btn:active{color:var(--red);background:var(--red-light)}
@@ -388,6 +403,18 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
   <!-- COMPARATIVO MÊS ANTERIOR -->
   <div id="comparativo-banner" style="display:none;margin:10px 16px 0;padding:10px 14px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-sm);font-size:13px;color:var(--text-2);display:flex;align-items:center;gap:8px"></div>
 
+  <!-- RECORRENTES E PARCELAS -->
+  <div class="section">
+    <div class="section-head">
+      <span class="section-title">Recorrentes & Parcelas</span>
+      <div style="display:flex;gap:8px">
+        <button class="section-action" onclick="openRecorrenteModal()"><i class="ti ti-refresh" style="font-size:12px"></i> Recorrente</button>
+        <button class="section-action" onclick="openParcelamentoModal()"><i class="ti ti-credit-card" style="font-size:12px"></i> Parcelar</button>
+      </div>
+    </div>
+    <div id="recorrentes-container"></div>
+  </div>
+
   <!-- BUSCA -->
   <div class="section" style="padding-top:12px">
     <div style="position:relative">
@@ -456,6 +483,69 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
   <div class="section">
     <div class="section-head"><span class="section-title">Por categoria</span></div>
     <div class="chart-card" id="chart-container"><div class="empty">Nenhum dado ainda</div></div>
+  </div>
+</div>
+
+<!-- MODAL RECORRENTE -->
+<div class="modal-overlay" id="recorrente-modal">
+  <div class="modal">
+    <div class="modal-title"><i class="ti ti-refresh" style="color:var(--cyan);margin-right:6px"></i>Nova despesa recorrente</div>
+    <div style="font-size:12px;color:var(--text-3);margin-bottom:14px;margin-top:-8px">Lançada automaticamente todo mês</div>
+    <div class="field" style="margin-bottom:12px">
+      <label style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.08em">Categoria</label>
+      <select id="rec-cat" style="width:100%;height:48px;border:1px solid var(--border2);border-radius:var(--radius-sm);padding:0 12px;font-size:15px;background:var(--bg2);color:var(--text);font-family:inherit;-webkit-appearance:none;margin-top:6px"></select>
+    </div>
+    <div class="field" style="margin-bottom:12px">
+      <label style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.08em">Descrição</label>
+      <input type="text" id="rec-desc" placeholder="Ex: Aluguel, Netflix, Academia..." style="width:100%;height:48px;border:1px solid var(--border2);border-radius:var(--radius-sm);padding:0 14px;font-size:15px;background:var(--bg2);color:var(--text);font-family:inherit;-webkit-appearance:none;margin-top:6px">
+    </div>
+    <div style="display:flex;gap:10px;margin-bottom:16px">
+      <div class="field" style="flex:1;margin:0">
+        <label style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.08em">Valor (R$)</label>
+        <input type="number" id="rec-val" min="0" step="0.01" inputmode="decimal" placeholder="0,00" style="width:100%;height:48px;border:1px solid var(--border2);border-radius:var(--radius-sm);padding:0 12px;font-size:15px;background:var(--bg2);color:var(--text);font-family:inherit;-webkit-appearance:none;margin-top:6px">
+      </div>
+      <div class="field" style="flex:1;margin:0">
+        <label style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.08em">Dia de venc.</label>
+        <input type="number" id="rec-dia" min="1" max="28" value="1" style="width:100%;height:48px;border:1px solid var(--border2);border-radius:var(--radius-sm);padding:0 12px;font-size:15px;background:var(--bg2);color:var(--text);font-family:inherit;-webkit-appearance:none;margin-top:6px">
+      </div>
+    </div>
+    <button class="modal-btn primary" onclick="saveRecorrente()" style="width:100%;margin-bottom:8px"><i class="ti ti-check"></i> Salvar recorrente</button>
+    <button class="modal-cancel" onclick="closeRecorrenteModal()">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL PARCELAMENTO -->
+<div class="modal-overlay" id="parcelamento-modal">
+  <div class="modal">
+    <div class="modal-title"><i class="ti ti-credit-card" style="color:var(--cyan);margin-right:6px"></i>Compra parcelada</div>
+    <div style="font-size:12px;color:var(--text-3);margin-bottom:14px;margin-top:-8px">Cria um lançamento para cada parcela</div>
+    <div class="field" style="margin-bottom:12px">
+      <label style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.08em">Categoria</label>
+      <select id="parc-cat" style="width:100%;height:48px;border:1px solid var(--border2);border-radius:var(--radius-sm);padding:0 12px;font-size:15px;background:var(--bg2);color:var(--text);font-family:inherit;-webkit-appearance:none;margin-top:6px"></select>
+    </div>
+    <div class="field" style="margin-bottom:12px">
+      <label style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.08em">Descrição</label>
+      <input type="text" id="parc-desc" placeholder="Ex: TV Samsung, iPhone 15..." style="width:100%;height:48px;border:1px solid var(--border2);border-radius:var(--radius-sm);padding:0 14px;font-size:15px;background:var(--bg2);color:var(--text);font-family:inherit;-webkit-appearance:none;margin-top:6px">
+    </div>
+    <div style="display:flex;gap:10px;margin-bottom:12px">
+      <div class="field" style="flex:1;margin:0">
+        <label style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.08em">Valor da parcela</label>
+        <input type="number" id="parc-val" min="0" step="0.01" inputmode="decimal" placeholder="0,00" style="width:100%;height:48px;border:1px solid var(--border2);border-radius:var(--radius-sm);padding:0 12px;font-size:15px;background:var(--bg2);color:var(--text);font-family:inherit;-webkit-appearance:none;margin-top:6px">
+      </div>
+      <div class="field" style="flex:1;margin:0">
+        <label style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.08em">Nº de parcelas</label>
+        <input type="number" id="parc-total" min="2" max="60" value="12" style="width:100%;height:48px;border:1px solid var(--border2);border-radius:var(--radius-sm);padding:0 12px;font-size:15px;background:var(--bg2);color:var(--text);font-family:inherit;-webkit-appearance:none;margin-top:6px">
+      </div>
+    </div>
+    <div class="field" style="margin-bottom:16px">
+      <label style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.08em">Início (mês/ano)</label>
+      <input type="text" id="parc-inicio" placeholder="Ex: 06/25" maxlength="5" style="width:100%;height:48px;border:1px solid var(--border2);border-radius:var(--radius-sm);padding:0 14px;font-size:15px;background:var(--bg2);color:var(--text);font-family:inherit;-webkit-appearance:none;margin-top:6px">
+    </div>
+    <div id="parc-preview" style="background:var(--bg2);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:14px;font-size:13px;color:var(--text-3)">
+      Preencha os campos para ver o resumo
+    </div>
+    <button class="modal-btn primary" onclick="saveParcelamento()" style="width:100%;margin-bottom:8px"><i class="ti ti-check"></i> Criar parcelamento</button>
+    <button class="modal-cancel" onclick="closeParcelamentoModal()">Cancelar</button>
   </div>
 </div>
 
@@ -547,7 +637,7 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
 <script>
 const CAT_META={'Combustível':{bg:'#E1F5EE',color:'#085041',icon:'ti-gas-station'},'Alimentação':{bg:'#E6F1FB',color:'#042C53',icon:'ti-tools-kitchen-2'},'Lazer':{bg:'#FAEEDA',color:'#412402',icon:'ti-device-gamepad-2'},'Saúde':{bg:'#FAECE7',color:'#4A1B0C',icon:'ti-heart-rate-monitor'},'Transporte':{bg:'#EEEDFE',color:'#26215C',icon:'ti-bus'},'Moradia':{bg:'#EAF3DE',color:'#173404',icon:'ti-home-2'},'Educação':{bg:'#FBEAF0',color:'#4B1528',icon:'ti-book'},'Vestuário':{bg:'#F1EFE8',color:'#2C2C2A',icon:'ti-hanger'},'Outros':{bg:'#F1EFE8',color:'#444441',icon:'ti-dots'}};
 const BAR_COLORS=['#1D9E75','#378ADD','#BA7517','#D85A30','#534AB7','#639922','#993556','#5F5E5A'];
-let entries=[],receitas=[],metas=[],authToken=localStorage.getItem('token'),userName=localStorage.getItem('uname'),pendingEmail='',currentPhotoEntryId=null,pendingPhotoBase64=null;
+let entries=[],receitas=[],metas=[],recorrentes=[],parcelamentos=[],authToken=localStorage.getItem('token'),userName=localStorage.getItem('uname'),pendingEmail='',currentPhotoEntryId=null,pendingPhotoBase64=null;
 let contaStatus=null;
 let tipoLanc='despesa';
 
@@ -770,15 +860,20 @@ function doLogout(){authToken=null;userName=null;localStorage.removeItem('token'
 
 async function loadEntries(){
   try{
-    const [desp, rec, met] = await Promise.all([
+    const [desp, rec, met, recorr, parc] = await Promise.all([
       api('/api/despesas'),
       api('/api/receitas'),
-      api('/api/metas')
+      api('/api/metas'),
+      api('/api/recorrentes'),
+      api('/api/parcelamentos')
     ]);
-    entries=desp; receitas=rec; metas=met;
+    entries=desp; receitas=rec; metas=met; recorrentes=recorr; parcelamentos=parc;
+    // Lançar recorrentes do mês automaticamente
+    if(recorrentes.length) api('/api/recorrentes/lancar',{method:'POST'}).then(()=>api('/api/despesas').then(d=>{entries=d;render();}));
     render();
     renderComparativo();
     renderMetas();
+    renderRecorrentes();
   }catch(e){showToast('Erro ao carregar',true)}
 }
 
@@ -1124,7 +1219,158 @@ async function deleteCategoria(id,nome){
 
 document.getElementById('cat-add-input').addEventListener('keydown',e=>{if(e.key==='Enter')addCategoria()});
 
-// TIPO DE LANÇAMENTO
+// ── RECORRENTES ──────────────────────────────────────────
+function renderRecorrentes(){
+  const cont=document.getElementById('recorrentes-container');
+  if(!recorrentes.length&&!parcelamentos.length){
+    cont.innerHTML='<div class="rec-list"><div class="empty-rec"><i class="ti ti-refresh" style="opacity:.3;font-size:24px;display:block;margin-bottom:6px"></i>Nenhum recorrente ou parcela cadastrado</div></div>';
+    return;
+  }
+  let html='<div class="rec-list">';
+  recorrentes.forEach(r=>{
+    html+=`<div class="rec-item">
+      <span class="rec-badge recorrente"><i class="ti ti-refresh" style="font-size:10px"></i> Todo mês</span>
+      <div class="rec-info">
+        <div class="rec-nome">${r.descricao||r.cat}</div>
+        <div class="rec-sub">${r.cat} · dia ${r.dia_venc||1}</div>
+      </div>
+      <span class="rec-val">${fmtR(r.val)}</span>
+      <button class="rec-del" onclick="deleteRecorrente(${r.id})" title="Remover"><i class="ti ti-trash"></i></button>
+    </div>`;
+  });
+  parcelamentos.forEach(p=>{
+    const restantes=p.total_parcelas-(p.parcela_atual-1);
+    html+=`<div class="rec-item">
+      <span class="rec-badge parcela"><i class="ti ti-credit-card" style="font-size:10px"></i> ${p.total_parcelas}x</span>
+      <div class="rec-info">
+        <div class="rec-nome">${p.descricao||p.cat}</div>
+        <div class="rec-sub">${p.cat} · ${fmtR(p.val_parcela)}/mês · desde ${p.data_inicio||'—'}</div>
+      </div>
+      <span class="rec-val" style="color:var(--amber)">${fmtR(p.val_parcela*p.total_parcelas)}</span>
+      <button class="rec-del" onclick="deleteParcelamento(${p.id})" title="Remover"><i class="ti ti-trash"></i></button>
+    </div>`;
+  });
+  html+='</div>';
+  cont.innerHTML=html;
+}
+
+function populateCatSelect(selId){
+  const sel=document.getElementById(selId);
+  const CATS=['Combustível','Alimentação','Lazer','Saúde','Transporte','Moradia','Educação','Vestuário','Outros',...customCats.map(c=>c.nome)];
+  sel.innerHTML=CATS.map(c=>`<option value="${c}">${c}</option>`).join('');
+}
+
+// Modal Recorrente
+function openRecorrenteModal(){
+  populateCatSelect('rec-cat');
+  document.getElementById('rec-desc').value='';
+  document.getElementById('rec-val').value='';
+  document.getElementById('rec-dia').value='1';
+  document.getElementById('recorrente-modal').classList.add('open');
+}
+function closeRecorrenteModal(){document.getElementById('recorrente-modal').classList.remove('open')}
+document.getElementById('recorrente-modal').addEventListener('click',function(e){if(e.target===this)closeRecorrenteModal()});
+
+async function saveRecorrente(){
+  const cat=document.getElementById('rec-cat').value;
+  const desc=document.getElementById('rec-desc').value.trim();
+  const val=parseFloat(document.getElementById('rec-val').value)||0;
+  const dia=parseInt(document.getElementById('rec-dia').value)||1;
+  if(!cat||val<=0){showToast('Preencha categoria e valor',true);return}
+  try{
+    const d=await api('/api/recorrentes',{method:'POST',body:JSON.stringify({cat,descricao:desc,val,dia_venc:dia})});
+    if(d.ok){
+      recorrentes.push({id:d.id,cat,descricao:desc,val,dia_venc:dia,ativo:true});
+      closeRecorrenteModal();renderRecorrentes();
+      showToast('Recorrente criado! Será lançado todo mês.');
+    }
+  }catch(e){showToast('Erro',true)}
+}
+
+async function deleteRecorrente(id){
+  if(!confirm('Remover esta despesa recorrente?'))return;
+  try{
+    await api('/api/recorrentes/'+id,{method:'DELETE'});
+    recorrentes=recorrentes.filter(r=>r.id!==id);
+    renderRecorrentes();showToast('Recorrente removido');
+  }catch(e){showToast('Erro',true)}
+}
+
+// Modal Parcelamento
+function openParcelamentoModal(){
+  populateCatSelect('parc-cat');
+  document.getElementById('parc-desc').value='';
+  document.getElementById('parc-val').value='';
+  document.getElementById('parc-total').value='12';
+  const now=new Date();
+  document.getElementById('parc-inicio').value=`${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getFullYear()).slice(2)}`;
+  updateParcPreview();
+  document.getElementById('parcelamento-modal').classList.add('open');
+}
+function closeParcelamentoModal(){document.getElementById('parcelamento-modal').classList.remove('open')}
+document.getElementById('parcelamento-modal').addEventListener('click',function(e){if(e.target===this)closeParcelamentoModal()});
+
+function updateParcPreview(){
+  const val=parseFloat(document.getElementById('parc-val').value)||0;
+  const total=parseInt(document.getElementById('parc-total').value)||0;
+  const inicio=document.getElementById('parc-inicio').value;
+  const prev=document.getElementById('parc-preview');
+  if(!val||!total){prev.innerHTML='Preencha os campos para ver o resumo';return}
+  const totalGeral=val*total;
+  const MESES=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  let meses=[];
+  if(inicio&&inicio.includes('/')){
+    try{
+      const[m,a]=inicio.split('/');
+      const mi=parseInt(m)-1;const ai=2000+parseInt(a);
+      for(let i=0;i<Math.min(total,3);i++){
+        const mn=((mi+i)%12);const an=ai+Math.floor((mi+i)/12);
+        meses.push(`${MESES[mn]}/${an}`);
+      }
+      if(total>3)meses.push(`... até ${MESES[((mi+total-1)%12)]}/${ai+Math.floor((mi+total-1)/12)}`);
+    }catch(e){}
+  }
+  prev.innerHTML=`<strong style="color:var(--cyan)">${total}x de ${fmtR(val)}</strong> = ${fmtR(totalGeral)} total${meses.length?'<br><span style="color:var(--text-3)">'+meses.join(' · ')+'</span>':''}`;
+}
+
+document.getElementById('parc-val').addEventListener('input',updateParcPreview);
+document.getElementById('parc-total').addEventListener('input',updateParcPreview);
+document.getElementById('parc-inicio').addEventListener('input',updateParcPreview);
+
+async function saveParcelamento(){
+  const cat=document.getElementById('parc-cat').value;
+  const desc=document.getElementById('parc-desc').value.trim();
+  const val=parseFloat(document.getElementById('parc-val').value)||0;
+  const total=parseInt(document.getElementById('parc-total').value)||0;
+  const inicio=document.getElementById('parc-inicio').value.trim();
+  if(!cat||val<=0||total<2){showToast('Preencha todos os campos',true);return}
+  if(!desc){showToast('Informe uma descrição',true);return}
+  try{
+    const d=await api('/api/parcelamentos',{method:'POST',body:JSON.stringify({cat,descricao:desc,val_parcela:val,total_parcelas:total,data_inicio:inicio})});
+    if(d.ok){
+      parcelamentos.push({id:d.id,cat,descricao:desc,val_parcela:val,total_parcelas:total,parcela_atual:1,data_inicio:inicio,ativo:true});
+      closeParcelamentoModal();
+      // Recarregar despesas para mostrar as parcelas
+      const novasDespesas=await api('/api/despesas');
+      entries=novasDespesas;
+      render();renderRecorrentes();
+      showToast(`${total} parcelas criadas!`);
+    }
+  }catch(e){showToast('Erro ao criar parcelamento',true)}
+}
+
+async function deleteParcelamento(id){
+  if(!confirm('Remover este parcelamento e todas as parcelas futuras?'))return;
+  try{
+    await api('/api/parcelamentos/'+id,{method:'DELETE'});
+    parcelamentos=parcelamentos.filter(p=>p.id!==id);
+    const novasDespesas=await api('/api/despesas');
+    entries=novasDespesas;
+    render();renderRecorrentes();showToast('Parcelamento removido');
+  }catch(e){showToast('Erro',true)}
+}
+
+
 function toggleTipoLanc(){
   tipoLanc=tipoLanc==='despesa'?'receita':'despesa';
   const btn=document.getElementById('btn-tipo-lanc');
