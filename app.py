@@ -552,15 +552,48 @@ def delete_meta(cat):
 @app.route('/api/cupom/validar', methods=['POST'])
 @require_auth
 def validar_cupom():
-    d    = request.get_json()
-    code = d.get('code','').strip().upper()
-    sb   = get_sb()
-    row  = sb.table('cupons').select('*').eq('code', code).eq('ativo', True).execute()
+    d     = request.get_json()
+    code  = d.get('code','').strip().upper()
+    plano = d.get('plano','')
+    sb    = get_sb()
+    row   = sb.table('cupons').select('*').eq('code', code).eq('ativo', True).execute()
     if not row.data: return jsonify({'error': 'Cupom inválido ou expirado'}), 404
     cupom = row.data[0]
     if cupom.get('usos_max') and cupom.get('usos_atual', 0) >= cupom['usos_max']:
-        return jsonify({'error': 'Cupom esgotado'}), 410
-    return jsonify({'ok': True, 'desconto': cupom['desconto'], 'tipo': cupom.get('tipo','pct')})
+        return jsonify({'error': 'Cupom esgotado — todas as vagas foram utilizadas'}), 410
+    # Verificar se cupom é válido para o plano
+    planos_validos = cupom.get('planos') or []
+    if planos_validos and plano and plano not in planos_validos:
+        nomes = {'basico':'Básico','standard':'Standard','premium':'Premium'}
+        nomes_validos = ', '.join([nomes.get(p,p) for p in planos_validos])
+        return jsonify({'error': f'Cupom válido apenas para: {nomes_validos}'}), 400
+    usos_restantes = None
+    if cupom.get('usos_max'):
+        usos_restantes = cupom['usos_max'] - cupom.get('usos_atual', 0)
+    return jsonify({
+        'ok': True,
+        'desconto': cupom['desconto'],
+        'tipo': cupom.get('tipo','pct'),
+        'planos': planos_validos,
+        'usos_restantes': usos_restantes
+    })
+
+@app.route('/api/cupom/aplicar', methods=['POST'])
+@require_auth
+def aplicar_cupom():
+    """Registra o uso do cupom após pagamento aprovado"""
+    d    = request.get_json()
+    code = d.get('code','').strip().upper()
+    sb   = get_sb()
+    row  = sb.table('cupons').select('*').eq('code', code).execute()
+    if not row.data: return jsonify({'ok': True})
+    cupom = row.data[0]
+    novos_usos = cupom.get('usos_atual', 0) + 1
+    update = {'usos_atual': novos_usos}
+    if cupom.get('usos_max') and novos_usos >= cupom['usos_max']:
+        update['ativo'] = False
+    sb.table('cupons').update(update).eq('code', code).execute()
+    return jsonify({'ok': True})
 
 @app.route('/api/adm/cupons', methods=['GET'])
 @require_adm
@@ -572,16 +605,28 @@ def adm_get_cupons():
 @app.route('/api/adm/cupons', methods=['POST'])
 @require_adm
 def adm_create_cupom():
-    d  = request.get_json()
-    sb = get_sb()
+    d    = request.get_json()
+    code = d.get('code','').strip().upper()
+    if not code: return jsonify({'error': 'Código obrigatório'}), 400
+    sb   = get_sb()
+    existing = sb.table('cupons').select('id').eq('code', code).execute()
+    if existing.data: return jsonify({'error': 'Código já existe'}), 409
     sb.table('cupons').insert({
-        'code':     d.get('code','').strip().upper(),
-        'desconto': float(d.get('desconto', 10)),
-        'tipo':     d.get('tipo', 'pct'),
-        'usos_max': d.get('usos_max'),
+        'code':       code,
+        'desconto':   float(d.get('desconto', 10)),
+        'tipo':       'pct',
+        'planos':     d.get('planos', []),
+        'usos_max':   int(d.get('usos_max')) if d.get('usos_max') else None,
         'usos_atual': 0,
-        'ativo':    True
+        'ativo':      True
     }).execute()
+    return jsonify({'ok': True})
+
+@app.route('/api/adm/cupons/<code>', methods=['DELETE'])
+@require_adm
+def adm_delete_cupom(code):
+    sb = get_sb()
+    sb.table('cupons').delete().eq('code', code).execute()
     return jsonify({'ok': True})
 
 @app.route('/api/adm/cupons/<code>/toggle', methods=['POST'])
@@ -899,6 +944,19 @@ def confirmar_pagamento():
         sb.table('pagamentos').insert({'user_id': g.user_id, 'mp_id': str(payment_id) if payment_id else None,
                                        'plano': plano, 'valor': PLANOS[plano]['preco'], 'status': 'aprovado'}).execute()
     except: pass
+    # Registrar uso do cupom se houver
+    cupom = d.get('cupom')
+    if cupom:
+        try:
+            row = sb.table('cupons').select('*').eq('code', cupom.upper()).execute()
+            if row.data:
+                c = row.data[0]
+                novos_usos = c.get('usos_atual', 0) + 1
+                update = {'usos_atual': novos_usos}
+                if c.get('usos_max') and novos_usos >= c['usos_max']:
+                    update['ativo'] = False
+                sb.table('cupons').update(update).eq('code', cupom.upper()).execute()
+        except: pass
     return jsonify({'ok': True, 'plano': plano})
 
 # ── ADM ──────────────────────────────────────────────────
