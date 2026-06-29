@@ -109,7 +109,29 @@ def email_verificacao(to, nome, codigo):
     </div>"""
     return send_email(to, 'Código de verificação — Despesas Pessoais', html)
 
-def email_reset_senha(to, nome, codigo):
+def email_novo_usuario_adm(nome, email_usuario):
+    html = f"""
+    <div style="font-family:sans-serif;max-width:480px;margin:0 auto;background:#0a0a0f;color:#f0f0f0;border-radius:12px;padding:32px;border:1px solid rgba(0,212,255,.2)">
+      <div style="text-align:center;margin-bottom:24px">
+        <div style="font-size:28px;font-weight:700;color:#00d4ff">π NexaPI</div>
+        <div style="font-size:13px;color:#606070;margin-top:4px">Despesas Pessoais · Notificação ADM</div>
+      </div>
+      <div style="background:#14141e;border:1px solid rgba(0,212,255,.2);border-radius:10px;padding:20px;margin-bottom:20px">
+        <div style="font-size:13px;color:#606070;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px">🆕 Novo usuário verificado</div>
+        <div style="font-size:18px;font-weight:700;color:#fff;margin-bottom:6px">{nome}</div>
+        <div style="font-size:14px;color:#00d4ff">{email_usuario}</div>
+        <div style="font-size:12px;color:#606070;margin-top:8px">Verificação 2FA concluída em {datetime.utcnow().strftime('%d/%m/%Y às %H:%M')} UTC</div>
+      </div>
+      <div style="text-align:center">
+        <a href="{APP_URL}/admin" style="display:inline-block;background:linear-gradient(135deg,#00d4ff,#0099bb);color:#000;font-size:14px;font-weight:700;padding:12px 28px;border-radius:8px;text-decoration:none">
+          Ver no painel ADM
+        </a>
+      </div>
+      <div style="border-top:1px solid rgba(255,255,255,.06);margin-top:24px;padding-top:16px;text-align:center">
+        <a href="https://www.nexapi.com.br" style="color:#00d4ff;font-size:12px;text-decoration:none">www.nexapi.com.br</a>
+      </div>
+    </div>"""
+    return send_email(ADM_EMAIL, f'🆕 Novo usuário: {nome} — Despesas Pessoais', html)
     html = f"""
     <div style="font-family:sans-serif;max-width:480px;margin:0 auto;background:#0a0a0f;color:#f0f0f0;border-radius:12px;padding:32px;border:1px solid rgba(0,212,255,.2)">
       <div style="text-align:center;margin-bottom:24px">
@@ -285,6 +307,9 @@ def verify_email():
     if user.get('verify_exp') and now > user['verify_exp']:
         return jsonify({'error': 'Código expirado. Solicite novo cadastro.'}), 400
     sb.table('users').update({'verified': True, 'verify_code': None, 'verify_exp': None}).eq('id', user['id']).execute()
+    # Notificar ADM
+    try: email_novo_usuario_adm(user['name'], user['email'])
+    except: pass
     return jsonify({'ok': True, 'token': make_token(user['id']), 'name': user['name']})
 
 @app.route('/api/auth/login', methods=['POST'])
