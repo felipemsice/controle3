@@ -594,6 +594,143 @@ def adm_toggle_cupom(code):
     sb.table('cupons').update({'ativo': new}).eq('code', code).execute()
     return jsonify({'ok': True, 'ativo': new})
 
+# ── RECORRENTES ──────────────────────────────────────────
+@app.route('/api/recorrentes', methods=['GET'])
+@require_auth
+def get_recorrentes():
+    sb   = get_sb()
+    rows = sb.table('recorrentes').select('*').eq('user_id', g.user_id).eq('ativo', True).order('criado').execute()
+    return jsonify(rows.data or [])
+
+@app.route('/api/recorrentes', methods=['POST'])
+@require_auth
+def add_recorrente():
+    d  = request.get_json()
+    sb = get_sb()
+    res = sb.table('recorrentes').insert({
+        'user_id':   g.user_id,
+        'cat':       d.get('cat'),
+        'val':       float(d.get('val', 0)),
+        'descricao': d.get('descricao',''),
+        'dia_venc':  int(d.get('dia_venc', 1)),
+        'ativo':     True
+    }).execute()
+    return jsonify({'ok': True, 'id': res.data[0]['id']})
+
+@app.route('/api/recorrentes/<int:rid>', methods=['DELETE'])
+@require_auth
+def delete_recorrente(rid):
+    sb  = get_sb()
+    row = sb.table('recorrentes').select('id').eq('id', rid).eq('user_id', g.user_id).execute()
+    if not row.data: return jsonify({'error': 'Não encontrado'}), 404
+    sb.table('recorrentes').update({'ativo': False}).eq('id', rid).execute()
+    return jsonify({'ok': True})
+
+@app.route('/api/recorrentes/lancar', methods=['POST'])
+@require_auth
+def lancar_recorrentes():
+    """Lança as recorrentes do mês atual que ainda não foram lançadas"""
+    sb   = get_sb()
+    now  = datetime.utcnow()
+    mes  = f"{now.month:02d}/{str(now.year)[2:]}"
+    rows = sb.table('recorrentes').select('*').eq('user_id', g.user_id).eq('ativo', True).execute()
+    lancados = 0
+    for r in (rows.data or []):
+        # Verificar se já foi lançado esse mês
+        existe = sb.table('despesas').select('id').eq('user_id', g.user_id)\
+            .eq('recorrente_id', r['id']).like('date', f"%/{mes}").execute()
+        if existe.data: continue
+        dia = min(int(r.get('dia_venc') or 1), 28)
+        date_str = f"{dia:02d}/{mes}"
+        sb.table('despesas').insert({
+            'user_id':      g.user_id,
+            'cat':          r['cat'],
+            'val':          r['val'],
+            'date':         date_str,
+            'time':         '00:00',
+            'ts':           int(now.timestamp() * 1000),
+            'obs':          r.get('descricao') or 'Recorrente',
+            'recorrente_id': r['id']
+        }).execute()
+        lancados += 1
+    return jsonify({'ok': True, 'lancados': lancados})
+
+# ── PARCELAMENTOS ─────────────────────────────────────────
+@app.route('/api/parcelamentos', methods=['GET'])
+@require_auth
+def get_parcelamentos():
+    sb   = get_sb()
+    rows = sb.table('parcelamentos').select('*').eq('user_id', g.user_id).eq('ativo', True).order('criado').execute()
+    return jsonify(rows.data or [])
+
+@app.route('/api/parcelamentos', methods=['POST'])
+@require_auth
+def add_parcelamento():
+    d      = request.get_json()
+    sb     = get_sb()
+    cat    = d.get('cat')
+    desc   = d.get('descricao','')
+    val    = float(d.get('val_parcela', 0))
+    total  = int(d.get('total_parcelas', 1))
+    inicio = d.get('data_inicio','')  # formato MM/YY
+    if not cat or val <= 0 or total < 1:
+        return jsonify({'error': 'Dados inválidos'}), 400
+    # Criar o parcelamento
+    res = sb.table('parcelamentos').insert({
+        'user_id':        g.user_id,
+        'cat':            cat,
+        'descricao':      desc,
+        'val_parcela':    val,
+        'total_parcelas': total,
+        'parcela_atual':  1,
+        'data_inicio':    inicio,
+        'ativo':          True
+    }).execute()
+    parc_id = res.data[0]['id']
+    # Lançar todas as parcelas
+    now = datetime.utcnow()
+    if inicio:
+        try:
+            mes_i, ano_i = inicio.split('/')
+            mes_atual = int(mes_i)
+            ano_atual = 2000 + int(ano_i)
+        except:
+            mes_atual = now.month
+            ano_atual = now.year
+    else:
+        mes_atual = now.month
+        ano_atual = now.year
+    for i in range(total):
+        m = ((mes_atual - 1 + i) % 12) + 1
+        a = ano_atual + ((mes_atual - 1 + i) // 12)
+        date_str = f"01/{m:02d}/{str(a)[2:]}"
+        sb.table('despesas').insert({
+            'user_id':          g.user_id,
+            'cat':              cat,
+            'val':              val,
+            'date':             date_str,
+            'time':             '00:00',
+            'ts':               int(now.timestamp() * 1000) + i,
+            'obs':              f"{desc} ({i+1}/{total})",
+            'parcelamento_id':  parc_id,
+            'parcela_num':      i + 1
+        }).execute()
+    return jsonify({'ok': True, 'id': parc_id, 'parcelas_criadas': total})
+
+@app.route('/api/parcelamentos/<int:pid>', methods=['DELETE'])
+@require_auth
+def delete_parcelamento(pid):
+    sb  = get_sb()
+    row = sb.table('parcelamentos').select('id').eq('id', pid).eq('user_id', g.user_id).execute()
+    if not row.data: return jsonify({'error': 'Não encontrado'}), 404
+    # Remover parcelas futuras
+    now = datetime.utcnow()
+    mes = f"{now.month:02d}/{str(now.year)[2:]}"
+    sb.table('despesas').delete().eq('user_id', g.user_id)\
+        .eq('parcelamento_id', pid).execute()
+    sb.table('parcelamentos').update({'ativo': False}).eq('id', pid).execute()
+    return jsonify({'ok': True})
+
 # ── OBSERVAÇÃO ───────────────────────────────────────────
 @app.route('/api/obs', methods=['POST'])
 @require_auth
