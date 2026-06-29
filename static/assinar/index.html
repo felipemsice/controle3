@@ -315,6 +315,7 @@ async function pagar(){
 async function verificarRetorno(){
   const params=new URLSearchParams(window.location.search);
   const status=params.get('status');const plano=params.get('plano');
+  const cupom=params.get('cupom')||'';
   const paymentId=params.get('payment_id')||params.get('collection_id');
   const collectionStatus=params.get('collection_status')||params.get('status');
   if(!status&&!paymentId)return;
@@ -322,7 +323,7 @@ async function verificarRetorno(){
   const aprovado=(status==='sucesso'||collectionStatus==='approved');
   if(aprovado&&plano){
     try{
-      const body=paymentId?{payment_id:paymentId,plano}:{plano};
+      const body=paymentId?{payment_id:paymentId,plano,cupom}:{plano,cupom};
       const r=await fetch('/api/pagamento/confirmar',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+authToken},body:JSON.stringify(body)});
       const d=await r.json();
       if(d.ok){
@@ -388,18 +389,43 @@ async function aplicarCupom(){
   }catch(e){msg.style.display='block';msg.style.color='var(--red)';msg.textContent='Erro ao validar cupom';}
 }
 
+const PRECOS_BASE={basico:39.90,standard:69.90,premium:119.90};
+
+function calcPreco(plano){
+  let preco=PRECOS_BASE[plano]||0;
+  if(cupomAtivo){
+    // Verificar se cupom é válido para este plano
+    if(!cupomAtivo.planos||!cupomAtivo.planos.length||cupomAtivo.planos.includes(plano)){
+      preco=Math.max(1, preco*(1-cupomAtivo.desconto/100));
+    }
+  }
+  return preco;
+}
+
 function updatePayBtn(){
   const btn=document.getElementById('pay-btn');
-  if(!planoSelecionado)return;
-  const precos={basico:39.90,standard:69.90,premium:119.90};
-  let preco=precos[planoSelecionado]||0;
-  if(cupomAtivo){
-    if(cupomAtivo.tipo==='pct') preco=preco*(1-cupomAtivo.desconto/100);
-    else preco=Math.max(0,preco-cupomAtivo.desconto);
-    btn.innerHTML=`<i class="ti ti-lock"></i> Assinar por R$ ${preco.toFixed(2).replace('.',',')}`;
-  } else {
+  if(!planoSelecionado){btn.disabled=true;return;}
+  const preco=calcPreco(planoSelecionado);
+  const precoBase=PRECOS_BASE[planoSelecionado];
+  if(cupomAtivo&&preco<precoBase){
+    btn.innerHTML=`<i class="ti ti-lock"></i> Assinar por <s style="opacity:.5;font-size:14px">R$ ${precoBase.toFixed(2).replace('.',',')}</s> R$ ${preco.toFixed(2).replace('.',',')}`;
+  }else{
     btn.innerHTML=`<i class="ti ti-lock"></i> Assinar agora`;
   }
+  // Atualizar preços nos cards
+  ['basico','standard','premium'].forEach(p=>{
+    const el=document.querySelector(`#card-${p} .plano-valor`);
+    if(!el)return;
+    const pc=calcPreco(p);
+    const pb=PRECOS_BASE[p];
+    if(cupomAtivo&&pc<pb){
+      el.innerHTML=`<s style="font-size:14px;opacity:.5;font-weight:400">R$ ${pb.toFixed(2).replace('.',',')}</s><br>R$ ${pc.toFixed(2).replace('.',',')}`;
+      el.style.color='var(--cyan)';
+    }else{
+      el.innerHTML=`R$ ${pb.toFixed(2).replace('.',',')}`;
+      el.style.color='var(--cyan)';
+    }
+  });
 }
 
 selectPlano('standard');
