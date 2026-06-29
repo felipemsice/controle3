@@ -85,7 +85,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
 .modal-btn{flex:1;height:44px;border-radius:8px;border:none;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit}
 .modal-btn.primary{background:linear-gradient(135deg,var(--cyan),var(--cyan-dark));color:#000}
 .modal-btn.cancel{background:var(--bg2);color:var(--text-2);border:1px solid var(--border2)}
-.empty{text-align:center;padding:3rem;color:var(--text-3);font-size:14px}
+.tab-btn{height:36px;padding:0 16px;border-radius:8px 8px 0 0;border:none;background:none;color:var(--text-3);font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tab-btn.active{color:var(--green);border-bottom-color:var(--green);background:rgba(29,158,117,.06)}
+.pill-cyan{background:rgba(29,158,117,.12);color:var(--green);font-size:11px;font-weight:600;padding:3px 8px;border-radius:999px}
+.cupom-row{display:flex;align-items:center;gap:10px;padding:12px 20px;border-bottom:1px solid var(--border)}
+.cupom-row:last-child{border-bottom:none}
+.cupom-code{font-size:15px;font-weight:700;color:var(--text);font-family:monospace;letter-spacing:.05em;width:120px;flex-shrink:0}
+.cupom-info{flex:1;min-width:0}
+.cupom-desc{font-size:13px;color:var(--text-2)}
+.cupom-sub{font-size:11px;color:var(--text-3);margin-top:2px}
+.cupom-status{font-size:11px;font-weight:600;padding:3px 8px;border-radius:999px;white-space:nowrap}
+.cupom-status.ativo{background:rgba(29,158,117,.12);color:var(--green)}
+.cupom-status.inativo{background:var(--red-light);color:var(--red)}
+.cupom-status.esgotado{background:#F1EFE8;color:#444}
 .empty i{font-size:28px;display:block;margin-bottom:8px;opacity:.2}
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--surface2);color:var(--cyan);border:1px solid var(--border);font-size:14px;font-weight:500;padding:12px 22px;border-radius:999px;transition:transform .3s cubic-bezier(.34,1.56,.64,1),opacity .3s;opacity:0;z-index:999;pointer-events:none;white-space:nowrap;box-shadow:0 8px 24px rgba(0,212,255,.1)}
 .toast.show{transform:translateX(-50%) translateY(0);opacity:1}
@@ -123,30 +135,82 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
     <div class="stat-card"><div class="label">Expirados</div><div class="value" id="stat-exp">—</div></div>
   </div>
 
-  <!-- FILTRO -->
-  <div class="filter-bar">
-    <input type="text" id="busca" placeholder="Buscar por nome ou telefone..." oninput="filtrar()">
-    <select id="filtro-status" onchange="filtrar()">
-      <option value="">Todos os status</option>
-      <option value="trial">Trial</option>
-      <option value="ativo">Plano ativo</option>
-      <option value="expirado">Expirado</option>
-    </select>
-    <select id="filtro-plano" onchange="filtrar()">
-      <option value="">Todos os planos</option>
-      <option value="basico">Básico</option>
-      <option value="standard">Standard</option>
-      <option value="premium">Premium</option>
-    </select>
+  <!-- ABAS -->
+  <div style="display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid var(--border)">
+    <button class="tab-btn active" id="tab-usuarios" onclick="switchTab('usuarios')"><i class="ti ti-users" style="font-size:13px"></i> Usuários</button>
+    <button class="tab-btn" id="tab-cupons" onclick="switchTab('cupons')"><i class="ti ti-ticket" style="font-size:13px"></i> Cupons</button>
   </div>
 
-  <!-- LISTA -->
-  <div class="users-card">
-    <div class="users-head">
-      <h2 id="users-count">Usuários</h2>
-      <button class="refresh-btn" onclick="loadUsers()"><i class="ti ti-refresh" style="font-size:14px"></i> Atualizar</button>
+  <!-- ABA USUÁRIOS -->
+  <div id="panel-usuarios">
+    <div class="filter-bar">
+      <input type="text" id="busca" placeholder="Buscar por nome ou email..." oninput="filtrar()">
+      <select id="filtro-status" onchange="filtrar()">
+        <option value="">Todos os status</option>
+        <option value="trial">Trial</option>
+        <option value="ativo">Plano ativo</option>
+        <option value="expirado">Expirado</option>
+      </select>
+      <select id="filtro-plano" onchange="filtrar()">
+        <option value="">Todos os planos</option>
+        <option value="basico">Básico</option>
+        <option value="standard">Standard</option>
+        <option value="premium">Premium</option>
+      </select>
     </div>
-    <div id="users-list"><div class="empty"><i class="ti ti-users"></i>Carregando...</div></div>
+    <div class="users-card">
+      <div class="users-head">
+        <h2 id="users-count">Usuários</h2>
+        <button class="refresh-btn" onclick="loadUsers()"><i class="ti ti-refresh" style="font-size:14px"></i> Atualizar</button>
+      </div>
+      <div id="users-list"><div class="empty"><i class="ti ti-users"></i>Carregando...</div></div>
+    </div>
+  </div>
+
+  <!-- ABA CUPONS -->
+  <div id="panel-cupons" style="display:none">
+    <!-- CRIAR CUPOM -->
+    <div class="users-card" style="margin-bottom:16px;padding:16px">
+      <div class="users-head" style="margin-bottom:14px"><h2>Criar novo cupom</h2></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+        <div>
+          <label style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:5px">Código</label>
+          <input type="text" id="new-cupom-code" placeholder="Ex: NEXAPI20" maxlength="20" style="width:100%;height:40px;border:1px solid var(--border);border-radius:8px;padding:0 12px;font-size:14px;background:var(--bg);color:var(--text);font-family:inherit;text-transform:uppercase;letter-spacing:.05em">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:5px">Desconto (%)</label>
+          <input type="number" id="new-cupom-desc" min="1" max="100" value="10" placeholder="0-100" style="width:100%;height:40px;border:1px solid var(--border);border-radius:8px;padding:0 12px;font-size:14px;background:var(--bg);color:var(--text);font-family:inherit">
+        </div>
+      </div>
+      <div style="margin-bottom:10px">
+        <label style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:5px">Planos válidos</label>
+        <div style="display:flex;gap:8px">
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox" id="plano-basico" value="basico" style="width:16px;height:16px;accent-color:var(--green)"> Básico</label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox" id="plano-standard" value="standard" checked style="width:16px;height:16px;accent-color:var(--green)"> Standard</label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox" id="plano-premium" value="premium" style="width:16px;height:16px;accent-color:var(--green)"> Premium</label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox" id="plano-todos" checked onchange="toggleTodosPlanos(this)" style="width:16px;height:16px;accent-color:var(--green)"> Todos</label>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <div>
+          <label style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:5px">Limite de usos</label>
+          <input type="number" id="new-cupom-usos" min="1" placeholder="Ilimitado" style="width:100%;height:40px;border:1px solid var(--border);border-radius:8px;padding:0 12px;font-size:14px;background:var(--bg);color:var(--text);font-family:inherit">
+        </div>
+        <div style="display:flex;align-items:flex-end">
+          <button onclick="criarCupom()" style="width:100%;height:40px;border-radius:8px;border:none;background:var(--green);color:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px"><i class="ti ti-plus"></i> Criar cupom</button>
+        </div>
+      </div>
+      <div id="cupom-create-msg" style="font-size:13px;display:none"></div>
+    </div>
+
+    <!-- LISTA DE CUPONS -->
+    <div class="users-card">
+      <div class="users-head">
+        <h2>Cupons cadastrados</h2>
+        <button class="refresh-btn" onclick="loadCupons()"><i class="ti ti-refresh" style="font-size:14px"></i> Atualizar</button>
+      </div>
+      <div id="cupons-list"><div class="empty"><i class="ti ti-ticket"></i>Carregando...</div></div>
+    </div>
   </div>
 </div>
 
@@ -360,8 +424,90 @@ async function deleteUser(id,name){
   }catch(e){showToast('Erro',true)}
 }
 
-document.getElementById('adm-phone').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('adm-pw').focus()});
 document.getElementById('adm-pw').addEventListener('keydown',e=>{if(e.key==='Enter')doAdmLogin()});
+
+// ABAS
+function switchTab(tab){
+  document.getElementById('panel-usuarios').style.display=tab==='usuarios'?'block':'none';
+  document.getElementById('panel-cupons').style.display=tab==='cupons'?'block':'none';
+  document.getElementById('tab-usuarios').classList.toggle('active',tab==='usuarios');
+  document.getElementById('tab-cupons').classList.toggle('active',tab==='cupons');
+  if(tab==='cupons')loadCupons();
+}
+
+// CUPONS
+function toggleTodosPlanos(el){
+  ['basico','standard','premium'].forEach(p=>{
+    document.getElementById('plano-'+p).checked=!el.checked;
+    document.getElementById('plano-'+p).disabled=el.checked;
+  });
+}
+
+async function criarCupom(){
+  const code=document.getElementById('new-cupom-code').value.trim().toUpperCase();
+  const desc=parseFloat(document.getElementById('new-cupom-desc').value)||10;
+  const usos=document.getElementById('new-cupom-usos').value;
+  const msg=document.getElementById('cupom-create-msg');
+  if(!code){msg.style.display='block';msg.style.color='var(--red)';msg.textContent='Digite um código';return}
+  if(desc<1||desc>100){msg.style.display='block';msg.style.color='var(--red)';msg.textContent='Desconto entre 1% e 100%';return}
+  const todosCheck=document.getElementById('plano-todos').checked;
+  let planos=[];
+  if(!todosCheck){
+    ['basico','standard','premium'].forEach(p=>{if(document.getElementById('plano-'+p).checked)planos.push(p)});
+    if(!planos.length){msg.style.display='block';msg.style.color='var(--red)';msg.textContent='Selecione ao menos um plano';return}
+  }
+  try{
+    const d=await api('/api/adm/cupons',{method:'POST',body:JSON.stringify({
+      code, desconto:desc, planos:todosCheck?[]:planos,
+      usos_max:usos?parseInt(usos):null
+    })});
+    if(d.error){msg.style.display='block';msg.style.color='var(--red)';msg.textContent=d.error;return}
+    msg.style.display='block';msg.style.color='var(--green)';msg.textContent=`Cupom "${code}" criado!`;
+    document.getElementById('new-cupom-code').value='';
+    document.getElementById('new-cupom-usos').value='';
+    loadCupons();
+  }catch(e){msg.style.display='block';msg.style.color='var(--red)';msg.textContent='Erro'}
+}
+
+async function loadCupons(){
+  document.getElementById('cupons-list').innerHTML='<div class="empty"><i class="ti ti-loader"></i>Carregando...</div>';
+  try{
+    const cupons=await api('/api/adm/cupons');
+    if(!cupons.length){document.getElementById('cupons-list').innerHTML='<div class="empty"><i class="ti ti-ticket"></i>Nenhum cupom</div>';return}
+    const planosNome={basico:'Básico',standard:'Standard',premium:'Premium'};
+    document.getElementById('cupons-list').innerHTML=cupons.map(c=>{
+      const esgotado=c.usos_max&&c.usos_atual>=c.usos_max;
+      const status=esgotado?'esgotado':c.ativo?'ativo':'inativo';
+      const statusLabel=esgotado?'Esgotado':c.ativo?'Ativo':'Inativo';
+      const planos=c.planos&&c.planos.length?c.planos.map(p=>planosNome[p]||p).join(', '):'Todos os planos';
+      const usos=c.usos_max?`${c.usos_atual}/${c.usos_max} usos`:`${c.usos_atual||0} usos`;
+      const criado=c.criado?new Date(c.criado).toLocaleDateString('pt-BR'):'—';
+      return`<div class="cupom-row">
+        <div class="cupom-code">${c.code}</div>
+        <div class="cupom-info">
+          <div class="cupom-desc"><strong style="color:var(--green);font-size:15px">${c.desconto}% off</strong> · ${planos}</div>
+          <div class="cupom-sub">${usos} · ${criado}</div>
+        </div>
+        <span class="cupom-status ${status}">${statusLabel}</span>
+        <button class="icon-btn" onclick="toggleCupom('${c.code}',${c.ativo})" title="${c.ativo?'Desativar':'Ativar'}">
+          <i class="ti ${c.ativo?'ti-toggle-right':'ti-toggle-left'}" style="font-size:18px;color:${c.ativo?'var(--green)':'var(--text-3)'}"></i>
+        </button>
+        <button class="icon-btn" onclick="deleteCupom('${c.code}')" title="Excluir"><i class="ti ti-trash"></i></button>
+      </div>`;
+    }).join('');
+  }catch(e){document.getElementById('cupons-list').innerHTML='<div class="empty">Erro</div>'}
+}
+
+async function toggleCupom(code,ativo){
+  try{await api(`/api/adm/cupons/${code}/toggle`,{method:'POST'});showToast(`Cupom ${ativo?'desativado':'ativado'}`);loadCupons();}
+  catch(e){showToast('Erro',true)}
+}
+
+async function deleteCupom(code){
+  if(!confirm(`Excluir o cupom "${code}"?`))return;
+  try{await api(`/api/adm/cupons/${code}`,{method:'DELETE'});showToast('Cupom excluído');loadCupons();}
+  catch(e){showToast('Erro',true)}
+}
 
 if(admToken){
   document.getElementById('login-wrap').style.display='none';
