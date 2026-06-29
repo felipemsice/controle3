@@ -400,28 +400,16 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
     <div class="stat"><div class="stat-label">Saldo do mês</div><div class="stat-value" id="saldo-val" style="font-size:18px">—</div></div>
   </div>
 
-  <!-- COMPARATIVO MÊS ANTERIOR -->
-  <div id="comparativo-banner" style="display:none;margin:10px 16px 0;padding:10px 14px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-sm);font-size:13px;color:var(--text-2);display:flex;align-items:center;gap:8px"></div>
-
-  <!-- RECORRENTES E PARCELAS -->
-  <div class="section">
-    <div class="section-head">
-      <span class="section-title">Recorrentes & Parcelas</span>
-      <div style="display:flex;gap:8px">
-        <button class="section-action" onclick="openRecorrenteModal()"><i class="ti ti-refresh" style="font-size:12px"></i> Recorrente</button>
-        <button class="section-action" onclick="openParcelamentoModal()"><i class="ti ti-credit-card" style="font-size:12px"></i> Parcelar</button>
-      </div>
-    </div>
-    <div id="recorrentes-container"></div>
-  </div>
-
-  <!-- BUSCA -->
-  <div class="section" style="padding-top:12px">
+  <!-- BUSCA — logo abaixo dos cards de stats -->
+  <div style="padding:10px 16px 0">
     <div style="position:relative">
       <i class="ti ti-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-3);font-size:15px;pointer-events:none"></i>
-      <input type="text" id="busca-input" placeholder="Buscar lançamentos..." oninput="render()" style="width:100%;height:42px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:0 12px 0 36px;font-size:14px;color:var(--text);font-family:inherit;-webkit-appearance:none">
+      <input type="text" id="busca-input" placeholder="Buscar lançamentos..." oninput="filterRender()" style="width:100%;height:42px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:0 12px 0 36px;font-size:14px;color:var(--text);font-family:inherit;-webkit-appearance:none">
     </div>
   </div>
+
+  <!-- COMPARATIVO MÊS ANTERIOR -->
+  <div id="comparativo-banner" style="display:none;margin:10px 16px 0;padding:10px 14px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-sm);font-size:13px;color:var(--text-2);display:flex;align-items:center;gap:8px"></div>
 
   <!-- VOZ -->
   <div class="section">
@@ -477,6 +465,18 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
       <button class="section-action" onclick="clearAll()">Limpar tudo</button>
     </div>
     <div id="list-container"><div class="entries-card"><div class="empty"><i class="ti ti-receipt-off"></i>Nenhum lançamento ainda</div></div></div>
+  </div>
+
+  <!-- RECORRENTES E PARCELAS -->
+  <div class="section">
+    <div class="section-head">
+      <span class="section-title">Recorrentes & Parcelas</span>
+      <div style="display:flex;gap:8px">
+        <button class="section-action" onclick="openRecorrenteModal()"><i class="ti ti-refresh" style="font-size:12px"></i> Recorrente</button>
+        <button class="section-action" onclick="openParcelamentoModal()"><i class="ti ti-credit-card" style="font-size:12px"></i> Parcelar</button>
+      </div>
+    </div>
+    <div id="recorrentes-container"></div>
   </div>
 
   <!-- GRÁFICO -->
@@ -923,6 +923,10 @@ async function deleteEntry(id){
 async function clearAll(){
   if(!confirm('Limpar todos os lançamentos?'))return;
   try{await api('/api/despesas/clear',{method:'POST'});entries=[];render();showToast('Lançamentos removidos')}catch(e){showToast('Erro',true)}
+}
+
+function filterRender(){
+  render();
 }
 
 function render(){
