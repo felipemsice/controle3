@@ -270,6 +270,14 @@ function selectPlano(p){
   planoSelecionado=p;
   ['basico','standard','premium'].forEach(x=>{document.getElementById('card-'+x).classList.toggle('selected',x===p)});
   document.getElementById('pay-btn').disabled=false;
+  // Se cupom ativo não é válido para este plano, limpar
+  if(cupomAtivo&&cupomAtivo.planos&&cupomAtivo.planos.length&&!cupomAtivo.planos.includes(p)){
+    cupomAtivo=null;
+    const msg=document.getElementById('cupom-msg');
+    msg.style.display='block';msg.style.color='var(--amber)';
+    msg.textContent='Cupom não válido para este plano. Digite outro código.';
+    document.getElementById('cupom-input').value='';
+  }
   updatePayBtn();
 }
 
@@ -368,14 +376,14 @@ async function aplicarCupom(){
     const r=await fetch('/api/cupom/validar',{
       method:'POST',
       headers:{'Content-Type':'application/json',Authorization:'Bearer '+authToken},
-      body:JSON.stringify({code})
+      body:JSON.stringify({code, plano: planoSelecionado})
     });
     const d=await r.json();
-    if(d.error){msg.style.display='block';msg.style.color='var(--red)';msg.textContent=d.error;cupomAtivo=null;return}
-    cupomAtivo={code,desconto:d.desconto,tipo:d.tipo};
-    const desc=d.tipo==='pct'?`${d.desconto}% de desconto`:`R$ ${d.desconto} de desconto`;
+    if(d.error){msg.style.display='block';msg.style.color='var(--red)';msg.textContent=d.error;cupomAtivo=null;updatePayBtn();return}
+    cupomAtivo={code, desconto:d.desconto, tipo:d.tipo, planos:d.planos||[]};
+    const restantes=d.usos_restantes!==null?` · ${d.usos_restantes} restante${d.usos_restantes===1?'':'s'}`:'';
     msg.style.display='block';msg.style.color='var(--cyan)';
-    msg.innerHTML=`<i class="ti ti-check" style="vertical-align:-2px"></i> Cupom <strong>${code}</strong> aplicado — ${desc}!`;
+    msg.innerHTML=`<i class="ti ti-check" style="vertical-align:-2px"></i> Cupom <strong>${code}</strong> aplicado — <strong>${d.desconto}% de desconto</strong>${restantes}!`;
     updatePayBtn();
   }catch(e){msg.style.display='block';msg.style.color='var(--red)';msg.textContent='Erro ao validar cupom';}
 }
