@@ -870,6 +870,7 @@ def get_photo(ref):
 def criar_pagamento():
     d     = request.get_json()
     plano = d.get('plano')
+    cupom_code = (d.get('cupom') or '').strip().upper()
     if plano not in PLANOS: return jsonify({'error': 'Plano inválido'}), 400
     sb   = get_sb()
     res  = sb.table('users').select('*').eq('id', g.user_id).execute()
@@ -877,26 +878,44 @@ def criar_pagamento():
     user = res.data[0]
     sdk  = mp_sdk()
     p    = PLANOS[plano]
+    preco_final = p['preco']
+    desconto_info = ''
+
+    # Aplicar cupom se informado
+    if cupom_code:
+        cupom_res = sb.table('cupons').select('*').eq('code', cupom_code).eq('ativo', True).execute()
+        if cupom_res.data:
+            cupom = cupom_res.data[0]
+            usos_ok = not cupom.get('usos_max') or cupom.get('usos_atual', 0) < cupom['usos_max']
+            planos_ok = not cupom.get('planos') or not cupom['planos'] or plano in cupom['planos']
+            if usos_ok and planos_ok:
+                pct = float(cupom.get('desconto', 0))
+                preco_final = round(preco_final * (1 - pct / 100), 2)
+                desconto_info = f' ({int(pct)}% OFF - Cupom {cupom_code})'
+
+    # Garantir valor mínimo de R$ 1,00 (limite MP)
+    preco_final = max(1.00, preco_final)
+
+    title = f"Despesas Pessoais — Plano {p['nome']} (Anual){desconto_info}"
     pref_data = {
-        'items': [{'title': f"Despesas Pessoais — Plano {p['nome']} (Anual)",
-                   'quantity': 1, 'currency_id': 'BRL', 'unit_price': p['preco']}],
+        'items': [{'title': title, 'quantity': 1, 'currency_id': 'BRL', 'unit_price': preco_final}],
         'payer': {'name': user['name']},
         'back_urls': {
-            'success': f"{APP_URL}/assinar?status=sucesso&plano={plano}",
+            'success': f"{APP_URL}/assinar?status=sucesso&plano={plano}&cupom={cupom_code}",
             'failure': f"{APP_URL}/assinar?status=erro",
             'pending': f"{APP_URL}/assinar?status=pendente",
         },
         'auto_return': 'approved',
         'notification_url': f"{APP_URL}/api/pagamento/webhook",
-        'metadata': {'user_id': str(g.user_id), 'plano': plano},
+        'metadata': {'user_id': str(g.user_id), 'plano': plano, 'cupom': cupom_code},
         'statement_descriptor': 'DESPESAS APP',
     }
     result = sdk.preference().create(pref_data)
     if result['status'] != 201: return jsonify({'error': 'Erro ao criar preferência'}), 500
     pref = result['response']
     sb.table('pagamentos').insert({'user_id': g.user_id, 'mp_id': pref['id'],
-                                   'plano': plano, 'valor': p['preco'], 'status': 'pendente'}).execute()
-    return jsonify({'ok': True, 'init_point': pref['init_point']})
+                                   'plano': plano, 'valor': preco_final, 'status': 'pendente'}).execute()
+    return jsonify({'ok': True, 'init_point': pref['init_point'], 'preco_final': preco_final})
 
 @app.route('/api/pagamento/webhook', methods=['POST'])
 def webhook():
@@ -917,6 +936,17 @@ def webhook():
                     sb.table('users').update({'plano': plano, 'plano_end': plano_end, 'trial_end': None}).eq('id', uid).execute()
                     sb.table('pagamentos').insert({'user_id': uid, 'mp_id': str(payment_id),
                                                    'plano': plano, 'valor': pay.get('transaction_amount',0), 'status': 'aprovado'}).execute()
+                    # Registrar uso do cupom se houver
+                    cupom_code = (meta.get('cupom') or '').upper()
+                    if cupom_code:
+                        cupom_row = sb.table('cupons').select('*').eq('code', cupom_code).execute()
+                        if cupom_row.data:
+                            c = cupom_row.data[0]
+                            novos_usos = c.get('usos_atual', 0) + 1
+                            upd = {'usos_atual': novos_usos}
+                            if c.get('usos_max') and novos_usos >= c['usos_max']:
+                                upd['ativo'] = False
+                            sb.table('cupons').update(upd).eq('code', cupom_code).execute()
             except Exception as e:
                 print(f"Webhook error: {e}")
     return '', 200
