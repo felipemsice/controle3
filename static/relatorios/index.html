@@ -307,7 +307,7 @@ async function doLogin(){
     authToken=d.token;localStorage.setItem('token',authToken);localStorage.setItem('uname',d.name);
     document.getElementById('auth-wrap').style.display='none';
     document.getElementById('app-wrap').style.display='block';
-    initYears();await loadCategorias();await loadEntries();
+    await loadCategorias();await loadEntries();
   }catch(e){const el=document.getElementById('auth-err');el.textContent='Erro de conexão';el.classList.add('show')}
 }
 function doLogout(){authToken=null;localStorage.removeItem('token');localStorage.removeItem('uname');window.location.href='/'}
@@ -336,12 +336,39 @@ async function loadCategorias(){
 
 function initYears(){
   const sel=document.getElementById('f-year');
+  const prev=sel.value;
+  const anoAtual=new Date().getFullYear();
+
+  // Coletar anos únicos dos lançamentos existentes
+  const anosComDados=new Set();
+  allEntries.forEach(e=>{
+    const d=parseDate(e.date);
+    if(d.year)anosComDados.add(d.year);
+  });
+
+  // Se não houver nenhum dado ainda, mostra ao menos o ano atual
+  if(!anosComDados.size)anosComDados.add(anoAtual);
+
+  const anosOrdenados=[...anosComDados].sort((a,b)=>b-a);
+
   sel.innerHTML='<option value="">Todos</option>';
-  for(let y=2024;y<=2035;y++){const o=document.createElement('option');o.value=y;o.textContent=y;if(y===new Date().getFullYear())o.selected=true;sel.appendChild(o);}
+  anosOrdenados.forEach(y=>{
+    const o=document.createElement('option');
+    o.value=y;o.textContent=y;
+    sel.appendChild(o);
+  });
+
+  // Restaurar seleção anterior se ainda existir, senão selecionar o ano atual se tiver dados
+  if(prev&&anosOrdenados.includes(+prev)){sel.value=prev;}
+  else if(anosOrdenados.includes(anoAtual)){sel.value=anoAtual;}
 }
 
 async function loadEntries(){
-  try{allEntries=await api('/api/despesas');applyFilters()}catch(e){showToast('Erro ao carregar',true)}
+  try{
+    allEntries=await api('/api/despesas');
+    initYears();
+    applyFilters();
+  }catch(e){showToast('Erro ao carregar',true)}
 }
 
 function onFilterChange(){page=1;applyFilters()}
@@ -576,7 +603,7 @@ document.getElementById('viewer').addEventListener('click',function(e){if(e.targ
 if(authToken){
   document.getElementById('auth-wrap').style.display='none';
   document.getElementById('app-wrap').style.display='block';
-  initYears();loadCategorias().then(()=>loadEntries());
+  loadCategorias().then(()=>loadEntries());
 }
 </script>
 </body>
