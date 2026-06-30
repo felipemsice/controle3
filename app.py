@@ -6,19 +6,8 @@ import jwt
 import mercadopago
 import requests as http_requests
 from supabase import create_client, Client as SupabaseClient
-from authlib.integrations.flask_client import OAuth
 
 app = Flask(__name__, static_folder='static')
-app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret')
-
-oauth = OAuth(app)
-google = oauth.register(
-    name='google',
-    client_id=os.environ.get('GOOGLE_CLIENT_ID', ''),
-    client_secret=os.environ.get('GOOGLE_CLIENT_SECRET', ''),
-    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
-    client_kwargs={'scope': 'openid email profile'}
-)
 
 # ── CONFIG ───────────────────────────────────────────────
 SECRET_KEY      = os.environ.get('SECRET_KEY', 'dev-secret')
@@ -30,8 +19,6 @@ SUPABASE_URL    = os.environ.get('SUPABASE_URL', '')
 SUPABASE_KEY    = os.environ.get('SUPABASE_KEY', '')
 RESEND_API_KEY  = os.environ.get('RESEND_API_KEY', '')
 EMAIL_FROM      = os.environ.get('EMAIL_FROM', 'noreply@nexapi.com.br')
-GOOGLE_CLIENT_ID     = os.environ.get('GOOGLE_CLIENT_ID', '')
-GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET', '')
 
 PLANOS = {
     'basico': {
@@ -318,63 +305,6 @@ def relatorios_page():
 @app.route('/assinar')
 def assinar_page():
     return send_from_directory('static/assinar', 'index.html')
-
-# ── GOOGLE OAUTH ──────────────────────────────────────────
-@app.route('/auth/google/login')
-def google_login():
-    redirect_uri = f"{APP_URL}/auth/google/callback"
-    return google.authorize_redirect(redirect_uri)
-
-@app.route('/auth/google/callback')
-def google_callback():
-    try:
-        token = google.authorize_access_token()
-        userinfo = token.get('userinfo')
-        if not userinfo:
-            resp = google.get('https://www.googleapis.com/oauth2/v3/userinfo', token=token)
-            userinfo = resp.json()
-        email = userinfo.get('email', '').strip().lower()
-        name  = userinfo.get('name', email.split('@')[0])
-        if not email:
-            return f"<script>window.location='/?error=google_failed'</script>"
-
-        sb  = get_sb()
-        res = sb.table('users').select('*').eq('email', email).execute()
-
-        if res.data:
-            user = res.data[0]
-            if not user.get('active', True):
-                return f"<script>window.location='/?error=account_disabled'</script>"
-            if not user.get('verified'):
-                sb.table('users').update({'verified': True, 'verify_code': None, 'verify_exp': None}).eq('id', user['id']).execute()
-                try: email_novo_usuario_adm(user['name'], email)
-                except: pass
-        else:
-            trial_end = (datetime.utcnow() + timedelta(days=30)).isoformat()
-            ins = sb.table('users').insert({
-                'name': name, 'email': email,
-                'password': hash_password(secrets.token_hex(16)),  # senha aleatória, nunca usada
-                'trial_end': trial_end, 'verified': True, 'active': True,
-                'auth_provider': 'google'
-            }).execute()
-            user = ins.data[0]
-            try: email_novo_usuario_adm(name, email)
-            except: pass
-
-        jwt_token = make_token(user['id'])
-        # Retorna uma página HTML que salva o token e redireciona
-        return f"""<!DOCTYPE html><html><body style="background:#0a0a0f;color:#00d4ff;display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif">
-        <div>Entrando...</div>
-        <script>
-          localStorage.setItem('token','{jwt_token}');
-          localStorage.setItem('uname','{user["name"]}');
-          window.location.href='/';
-        </script>
-        </body></html>"""
-    except Exception as e:
-        print(f"Google OAuth error: {e}")
-        return f"<script>window.location='/?error=google_failed'</script>"
-
 
 @app.route('/api/auth/register', methods=['POST'])
 def register():
