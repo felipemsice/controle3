@@ -69,8 +69,10 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
 
 /* GRÁFICO */
 .chart-card{background:var(--surface);border-radius:var(--radius);border:1px solid var(--border2);padding:16px}
-.bar-row{display:flex;align-items:center;gap:10px;margin-bottom:12px}
-.bar-row:last-child{margin-bottom:0}
+.bar-row-wrap{margin-bottom:12px}
+.bar-row-wrap:last-child{margin-bottom:0}
+.bar-row{display:flex;align-items:center;gap:10px;transition:opacity .15s}
+.bar-row:hover{opacity:.85}
 .bar-cat{font-size:12px;color:var(--text-2);width:100px;flex-shrink:0;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;justify-content:flex-end;gap:6px}
 .bar-track{flex:1;height:28px;background:var(--bg2);border-radius:6px;overflow:hidden}
 .bar-fill{height:100%;border-radius:6px;transition:width .6s cubic-bezier(.4,0,.2,1);display:flex;align-items:center;padding-left:10px}
@@ -79,14 +81,30 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
 
 /* MENSAL */
 .monthly-card{background:var(--surface);border-radius:var(--radius);border:1px solid var(--border2);overflow:hidden}
-.month-row{display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid var(--border2)}
-.month-row:last-child{border-bottom:none}
+.month-row-wrap{border-bottom:1px solid var(--border2)}
+.month-row-wrap:last-child{border-bottom:none}
+.month-row{display:flex;align-items:center;gap:12px;padding:11px 16px;transition:background .15s}
 .month-row:hover{background:var(--bg2)}
 .month-label{font-size:13px;font-weight:600;color:var(--text);width:100px;flex-shrink:0}
 .month-track{flex:1;height:20px;background:var(--bg2);border-radius:4px;overflow:hidden}
 .month-fill{height:100%;border-radius:4px;background:var(--cyan);transition:width .5s cubic-bezier(.4,0,.2,1)}
 .month-val{font-size:13px;font-weight:600;color:var(--cyan);width:100px;text-align:right;flex-shrink:0}
 .month-count{font-size:11px;color:var(--text-3);width:60px;text-align:right;flex-shrink:0}
+
+/* DETALHES EXPANSÍVEIS */
+.detail-toggle{width:26px;height:26px;border-radius:7px;border:1px solid var(--border);background:rgba(0,212,255,.06);color:var(--cyan);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;transition:background .15s}
+.detail-toggle:hover{background:rgba(0,212,255,.15)}
+.detail-panel{display:none;margin-top:8px;background:var(--bg2);border-radius:10px;border:1px solid var(--border2);overflow:hidden}
+.detail-panel.open{display:block;animation:detailSlide .2s ease-out}
+@keyframes detailSlide{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+.detail-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--border2)}
+.detail-item:last-child{border-bottom:none}
+.detail-item-cat{font-size:10px;font-weight:700;padding:3px 8px;border-radius:999px;white-space:nowrap;flex-shrink:0}
+.detail-item-info{flex:1;min-width:0}
+.detail-item-date{font-size:12px;color:var(--text-2)}
+.detail-item-obs{font-size:11px;color:var(--text-3);font-style:italic;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.detail-item-val{font-size:13px;font-weight:700;color:var(--cyan);flex-shrink:0;white-space:nowrap}
+.detail-photo{width:32px;height:32px;border-radius:8px;object-fit:cover;cursor:zoom-in;flex-shrink:0;border:1px solid var(--border2)}
 
 /* TABELA */
 .table-card{background:var(--surface);border-radius:var(--radius);border:1px solid var(--border2);overflow:hidden}
@@ -399,13 +417,18 @@ function renderCatChart(){
   const totals={};filtered.forEach(e=>{totals[e.cat]=(totals[e.cat]||0)+e.val});
   const sorted=Object.entries(totals).sort((a,b)=>b[1]-a[1]);
   const grand=filtered.reduce((s,e)=>s+e.val,0);const mx=sorted[0][1];
-  cc.innerHTML=sorted.map(([cat,val])=>{
+  cc.innerHTML=sorted.map(([cat,val],i)=>{
     const m=CAT_META[cat]||{bar:'#00d4ff',bg:'#1a1a2e',color:'#00d4ff'};
     const pct=Math.round(val/grand*100);const w=Math.round(val/mx*100);
-    return`<div class="bar-row">
-      <div class="bar-cat" style="color:${m.color}">${cat}</div>
-      <div class="bar-track"><div class="bar-fill" style="width:${w}%;background:${m.bar}"><span class="bar-pct">${pct}%</span></div></div>
-      <div class="bar-val">${fmtR(val)}</div>
+    const detailId='cat-detail-'+i;
+    return`<div class="bar-row-wrap">
+      <div class="bar-row" style="cursor:pointer" onclick="toggleDetail('${detailId}','cat','${cat.replace(/'/g,"\\'")}')">
+        <div class="bar-cat" style="color:${m.color}">${cat}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${w}%;background:${m.bar}"><span class="bar-pct">${pct}%</span></div></div>
+        <div class="bar-val">${fmtR(val)}</div>
+        <button class="detail-toggle" id="${detailId}-btn"><i class="ti ti-plus"></i></button>
+      </div>
+      <div class="detail-panel" id="${detailId}"></div>
     </div>`;
   }).join('');
 }
@@ -417,15 +440,66 @@ function renderMonthlyChart(){
   filtered.forEach(e=>{const d=parseDate(e.date);const k=d.year+'-'+(d.month<10?'0':'')+d.month;totals[k]=(totals[k]||0)+e.val;counts[k]=(counts[k]||0)+1;});
   const sorted=Object.entries(totals).sort((a,b)=>a[0]>b[0]?1:-1);
   const mx=Math.max(...Object.values(totals));
-  mc.innerHTML=sorted.map(([k,val])=>{
+  mc.innerHTML=sorted.map(([k,val],i)=>{
     const[y,m]=k.split('-');
-    return`<div class="month-row">
-      <div class="month-label">${MONTHS[+m-1].substring(0,3)}/${y}</div>
-      <div class="month-track"><div class="month-fill" style="width:${Math.round(val/mx*100)}%"></div></div>
-      <div class="month-val">${fmtR(val)}</div>
-      <div class="month-count">${counts[k]} lanç.</div>
+    const detailId='month-detail-'+i;
+    return`<div class="month-row-wrap">
+      <div class="month-row" style="cursor:pointer" onclick="toggleDetail('${detailId}','month','${k}')">
+        <div class="month-label">${MONTHS[+m-1].substring(0,3)}/${y}</div>
+        <div class="month-track"><div class="month-fill" style="width:${Math.round(val/mx*100)}%"></div></div>
+        <div class="month-val">${fmtR(val)}</div>
+        <div class="month-count">${counts[k]} lanç.</div>
+        <button class="detail-toggle" id="${detailId}-btn"><i class="ti ti-plus"></i></button>
+      </div>
+      <div class="detail-panel" id="${detailId}"></div>
     </div>`;
   }).join('');
+}
+
+function toggleDetail(detailId,tipo,chave){
+  const panel=document.getElementById(detailId);
+  const btn=document.getElementById(detailId+'-btn');
+  if(panel.classList.contains('open')){
+    panel.classList.remove('open');
+    panel.innerHTML='';
+    btn.innerHTML='<i class="ti ti-plus"></i>';
+    return;
+  }
+  // Fechar outros painéis abertos
+  document.querySelectorAll('.detail-panel.open').forEach(p=>{p.classList.remove('open');p.innerHTML=''});
+  document.querySelectorAll('.detail-toggle').forEach(b=>b.innerHTML='<i class="ti ti-plus"></i>');
+
+  let itens;
+  if(tipo==='cat'){
+    itens=filtered.filter(e=>e.cat===chave);
+  }else{
+    const[y,m]=chave.split('-');
+    itens=filtered.filter(e=>{const d=parseDate(e.date);return d.year==y&&d.month==+m});
+  }
+  itens.sort((a,b)=>{
+    const da=parseDate(a.date),db=parseDate(b.date);
+    return(db.year*10000+db.month*100+db.day)-(da.year*10000+da.month*100+da.day);
+  });
+
+  panel.innerHTML=itens.map(e=>{
+    const m=CAT_META[e.cat]||{bg:'#1a1a2e',color:'#00d4ff'};
+    const imgSrc=e.photo_inline||(e.photo&&!e.photo.startsWith('db:')?`/api/photo/${e.photo}`:null);
+    const hasPhoto=!!imgSrc;
+    const hasObs=!!(e.obs&&e.obs.trim());
+    const photoThumb=hasPhoto?`<img src="${imgSrc}" class="detail-photo" onclick="event.stopPropagation();openViewer('${imgSrc}')" alt="foto">`:'';
+    return`<div class="detail-item">
+      <div class="detail-item-cat" style="background:${m.bg};color:${m.color}">${e.cat}</div>
+      <div class="detail-item-info">
+        <div class="detail-item-date">${e.date} ${e.time||''}</div>
+        ${hasObs?`<div class="detail-item-obs">"${e.obs}"</div>`:''}
+      </div>
+      <div class="detail-item-val">${fmtR(e.val)}</div>
+      ${photoThumb}
+    </div>`;
+  }).join('');
+
+  panel.classList.add('open');
+  btn.innerHTML='<i class="ti ti-minus"></i>';
 }
 
 function sortBy(col){
