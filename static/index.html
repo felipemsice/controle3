@@ -107,6 +107,7 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
 .mic-btn:active{transform:scale(.92)}
 .mic-btn.listening{background:linear-gradient(135deg,var(--red),#cc0020);color:#fff;animation:pulse 1.4s infinite;box-shadow:0 0 24px rgba(255,71,87,.3)}
 @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(255,71,87,.4),0 0 24px rgba(255,71,87,.2)}60%{box-shadow:0 0 0 16px rgba(255,71,87,0),0 0 24px rgba(255,71,87,.2)}}
+@keyframes spin{to{transform:rotate(360deg)}}
 .mic-transcript{font-size:15px;font-weight:600;color:var(--text);min-height:24px;margin-bottom:6px}
 .mic-hint{font-size:12px;color:var(--text-3)}
 
@@ -1157,11 +1158,74 @@ function updateObsCount(){
 function closeModal(){document.getElementById('photo-modal').classList.remove('open')}
 function triggerCamera(){document.getElementById('input-camera').click()}
 function triggerGallery(){document.getElementById('input-gallery').click()}
-function handleFile(input){
+
+// Comprime a imagem via canvas até ficar abaixo de ~100KB
+function compressImage(file, maxKB=100){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      const img=new Image();
+      img.onload=()=>{
+        let w=img.width,h=img.height;
+        const MAX_DIM=1280; // limite inicial de dimensão
+        if(w>MAX_DIM||h>MAX_DIM){
+          if(w>h){h=Math.round(h*(MAX_DIM/w));w=MAX_DIM}
+          else{w=Math.round(w*(MAX_DIM/h));h=MAX_DIM}
+        }
+        const canvas=document.createElement('canvas');
+        canvas.width=w;canvas.height=h;
+        const ctx=canvas.getContext('2d');
+        ctx.drawImage(img,0,0,w,h);
+
+        let quality=0.85;
+        let dataUrl=canvas.toDataURL('image/jpeg',quality);
+        let sizeKB=Math.round((dataUrl.length*0.75)/1024);
+
+        // Reduz qualidade progressivamente até ficar <= maxKB
+        while(sizeKB>maxKB&&quality>0.1){
+          quality-=0.1;
+          dataUrl=canvas.toDataURL('image/jpeg',quality);
+          sizeKB=Math.round((dataUrl.length*0.75)/1024);
+        }
+
+        // Se ainda estiver grande, reduz dimensões progressivamente
+        let attempts=0;
+        while(sizeKB>maxKB&&attempts<6){
+          w=Math.round(w*0.85);h=Math.round(h*0.85);
+          canvas.width=w;canvas.height=h;
+          ctx.clearRect(0,0,w,h);
+          ctx.drawImage(img,0,0,w,h);
+          dataUrl=canvas.toDataURL('image/jpeg',Math.max(quality,0.5));
+          sizeKB=Math.round((dataUrl.length*0.75)/1024);
+          attempts++;
+        }
+
+        resolve({dataUrl,sizeKB});
+      };
+      img.onerror=()=>reject(new Error('Erro ao carregar imagem'));
+      img.src=ev.target.result;
+    };
+    reader.onerror=()=>reject(new Error('Erro ao ler arquivo'));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function handleFile(input){
   const file=input.files[0];if(!file)return;
-  const reader=new FileReader();
-  reader.onload=ev=>{pendingPhotoBase64=ev.target.result;document.getElementById('modal-preview').innerHTML=`<img src="${pendingPhotoBase64}">`;document.getElementById('modal-save-btn').style.display='';document.getElementById('modal-remove-btn').style.display='none'};
-  reader.readAsDataURL(file);
+  const preview=document.getElementById('modal-preview');
+  preview.innerHTML='<div class="placeholder"><i class="ti ti-loader" style="animation:spin .8s linear infinite"></i>Otimizando imagem...</div>';
+  try{
+    const{dataUrl,sizeKB}=await compressImage(file,100);
+    pendingPhotoBase64=dataUrl;
+    preview.innerHTML=`<img src="${dataUrl}">`;
+    document.getElementById('modal-save-btn').style.display='';
+    document.getElementById('modal-remove-btn').style.display='none';
+    showToast(`Foto otimizada (${sizeKB}KB)`);
+  }catch(e){
+    showToast('Erro ao processar imagem',true);
+    preview.innerHTML='<div class="placeholder"><i class="ti ti-photo"></i>Nenhuma foto ainda</div>';
+  }
+  input.value='';
 }
 async function savePhotoObs(){
   if(!currentPhotoEntryId)return;
