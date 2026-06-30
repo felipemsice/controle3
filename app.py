@@ -6,8 +6,19 @@ import jwt
 import mercadopago
 import requests as http_requests
 from supabase import create_client, Client as SupabaseClient
+from authlib.integrations.flask_client import OAuth
 
 app = Flask(__name__, static_folder='static')
+app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret')
+
+oauth = OAuth(app)
+google = oauth.register(
+    name='google',
+    client_id=os.environ.get('GOOGLE_CLIENT_ID', ''),
+    client_secret=os.environ.get('GOOGLE_CLIENT_SECRET', ''),
+    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+    client_kwargs={'scope': 'openid email profile'}
+)
 
 # ── CONFIG ───────────────────────────────────────────────
 SECRET_KEY      = os.environ.get('SECRET_KEY', 'dev-secret')
@@ -19,6 +30,8 @@ SUPABASE_URL    = os.environ.get('SUPABASE_URL', '')
 SUPABASE_KEY    = os.environ.get('SUPABASE_KEY', '')
 RESEND_API_KEY  = os.environ.get('RESEND_API_KEY', '')
 EMAIL_FROM      = os.environ.get('EMAIL_FROM', 'noreply@nexapi.com.br')
+GOOGLE_CLIENT_ID     = os.environ.get('GOOGLE_CLIENT_ID', '')
+GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET', '')
 
 PLANOS = {
     'basico': {
@@ -132,6 +145,8 @@ def email_novo_usuario_adm(nome, email_usuario):
       </div>
     </div>"""
     return send_email(ADM_EMAIL, f'🆕 Novo usuário: {nome} — Despesas Pessoais', html)
+
+def email_reset_senha(to, nome, codigo):
     html = f"""
     <div style="font-family:sans-serif;max-width:480px;margin:0 auto;background:#0a0a0f;color:#f0f0f0;border-radius:12px;padding:32px;border:1px solid rgba(0,212,255,.2)">
       <div style="text-align:center;margin-bottom:24px">
@@ -154,6 +169,54 @@ def email_novo_usuario_adm(nome, email_usuario):
       </div>
     </div>"""
     return send_email(to, 'Redefinir senha — Despesas Pessoais', html)
+
+def email_troca_senha(to, nome, codigo):
+    html = f"""
+    <div style="font-family:sans-serif;max-width:480px;margin:0 auto;background:#0a0a0f;color:#f0f0f0;border-radius:12px;padding:32px;border:1px solid rgba(0,212,255,.2)">
+      <div style="text-align:center;margin-bottom:24px">
+        <div style="font-size:28px;font-weight:700;color:#00d4ff">π NexaPI</div>
+        <div style="font-size:13px;color:#606070;margin-top:4px">Despesas Pessoais</div>
+      </div>
+      <h2 style="font-size:20px;font-weight:600;color:#fff;margin-bottom:8px">Confirmar troca de senha</h2>
+      <p style="color:#a0a0b0;font-size:14px;line-height:1.6;margin-bottom:24px">
+        Olá {nome}, use o código abaixo para confirmar a alteração da sua senha:
+      </p>
+      <div style="background:#14141e;border:1px solid rgba(0,212,255,.3);border-radius:10px;padding:20px;text-align:center;margin-bottom:24px">
+        <div style="font-size:36px;font-weight:700;color:#00d4ff;letter-spacing:10px">{codigo}</div>
+        <div style="font-size:12px;color:#606070;margin-top:8px">Válido por 15 minutos</div>
+      </div>
+      <p style="color:#606070;font-size:12px;text-align:center">
+        Se não solicitou essa troca, ignore este email e sua senha permanecerá a mesma.
+      </p>
+      <div style="border-top:1px solid rgba(255,255,255,.06);margin-top:24px;padding-top:16px;text-align:center">
+        <a href="https://www.nexapi.com.br" style="color:#00d4ff;font-size:12px;text-decoration:none">www.nexapi.com.br</a>
+      </div>
+    </div>"""
+    return send_email(to, 'Confirmar troca de senha — Despesas Pessoais', html)
+
+def email_exclusao_conta(to, nome, codigo):
+    html = f"""
+    <div style="font-family:sans-serif;max-width:480px;margin:0 auto;background:#0a0a0f;color:#f0f0f0;border-radius:12px;padding:32px;border:1px solid rgba(255,71,87,.3)">
+      <div style="text-align:center;margin-bottom:24px">
+        <div style="font-size:28px;font-weight:700;color:#00d4ff">π NexaPI</div>
+        <div style="font-size:13px;color:#606070;margin-top:4px">Despesas Pessoais</div>
+      </div>
+      <h2 style="font-size:20px;font-weight:600;color:#ff4757;margin-bottom:8px">⚠️ Confirmar exclusão de conta</h2>
+      <p style="color:#a0a0b0;font-size:14px;line-height:1.6;margin-bottom:24px">
+        Olá {nome}, recebemos uma solicitação para <strong style="color:#ff4757">excluir permanentemente</strong> sua conta e todos os seus dados. Use o código abaixo para confirmar:
+      </p>
+      <div style="background:#14141e;border:1px solid rgba(255,71,87,.4);border-radius:10px;padding:20px;text-align:center;margin-bottom:24px">
+        <div style="font-size:36px;font-weight:700;color:#ff4757;letter-spacing:10px">{codigo}</div>
+        <div style="font-size:12px;color:#606070;margin-top:8px">Válido por 15 minutos</div>
+      </div>
+      <p style="color:#606070;font-size:12px;text-align:center">
+        Essa ação não pode ser desfeita. Se não foi você, ignore este email — sua conta não será afetada.
+      </p>
+      <div style="border-top:1px solid rgba(255,255,255,.06);margin-top:24px;padding-top:16px;text-align:center">
+        <a href="https://www.nexapi.com.br" style="color:#00d4ff;font-size:12px;text-decoration:none">www.nexapi.com.br</a>
+      </div>
+    </div>"""
+    return send_email(to, '⚠️ Confirmar exclusão de conta — Despesas Pessoais', html)
 
 def make_token(user_id, role='user'):
     payload = {'sub': user_id, 'role': role, 'exp': datetime.utcnow() + timedelta(days=30)}
@@ -256,7 +319,63 @@ def relatorios_page():
 def assinar_page():
     return send_from_directory('static/assinar', 'index.html')
 
-# ── AUTH ─────────────────────────────────────────────────
+# ── GOOGLE OAUTH ──────────────────────────────────────────
+@app.route('/auth/google/login')
+def google_login():
+    redirect_uri = f"{APP_URL}/auth/google/callback"
+    return google.authorize_redirect(redirect_uri)
+
+@app.route('/auth/google/callback')
+def google_callback():
+    try:
+        token = google.authorize_access_token()
+        userinfo = token.get('userinfo')
+        if not userinfo:
+            resp = google.get('https://www.googleapis.com/oauth2/v3/userinfo', token=token)
+            userinfo = resp.json()
+        email = userinfo.get('email', '').strip().lower()
+        name  = userinfo.get('name', email.split('@')[0])
+        if not email:
+            return f"<script>window.location='/?error=google_failed'</script>"
+
+        sb  = get_sb()
+        res = sb.table('users').select('*').eq('email', email).execute()
+
+        if res.data:
+            user = res.data[0]
+            if not user.get('active', True):
+                return f"<script>window.location='/?error=account_disabled'</script>"
+            if not user.get('verified'):
+                sb.table('users').update({'verified': True, 'verify_code': None, 'verify_exp': None}).eq('id', user['id']).execute()
+                try: email_novo_usuario_adm(user['name'], email)
+                except: pass
+        else:
+            trial_end = (datetime.utcnow() + timedelta(days=30)).isoformat()
+            ins = sb.table('users').insert({
+                'name': name, 'email': email,
+                'password': hash_password(secrets.token_hex(16)),  # senha aleatória, nunca usada
+                'trial_end': trial_end, 'verified': True, 'active': True,
+                'auth_provider': 'google'
+            }).execute()
+            user = ins.data[0]
+            try: email_novo_usuario_adm(name, email)
+            except: pass
+
+        jwt_token = make_token(user['id'])
+        # Retorna uma página HTML que salva o token e redireciona
+        return f"""<!DOCTYPE html><html><body style="background:#0a0a0f;color:#00d4ff;display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif">
+        <div>Entrando...</div>
+        <script>
+          localStorage.setItem('token','{jwt_token}');
+          localStorage.setItem('uname','{user["name"]}');
+          window.location.href='/';
+        </script>
+        </body></html>"""
+    except Exception as e:
+        print(f"Google OAuth error: {e}")
+        return f"<script>window.location='/?error=google_failed'</script>"
+
+
 @app.route('/api/auth/register', methods=['POST'])
 def register():
     d     = request.get_json()
@@ -369,7 +488,106 @@ def reset_password():
     }).eq('id', user['id']).execute()
     return jsonify({'ok': True})
 
-# ── STATUS DA CONTA ──────────────────────────────────────
+# ── PERFIL ───────────────────────────────────────────────
+@app.route('/api/perfil', methods=['GET'])
+@require_auth
+def get_perfil():
+    sb   = get_sb()
+    res  = sb.table('users').select('*').eq('id', g.user_id).execute()
+    if not res.data: return jsonify({'error': 'Usuário não encontrado'}), 404
+    user = res.data[0]
+    ps   = get_plano_status(user)
+    return jsonify({
+        'name': user['name'],
+        'email': user.get('email'),
+        'active': user.get('active', True),
+        'verified': user.get('verified', False),
+        'created': user.get('created_at'),
+        'status': ps
+    })
+
+@app.route('/api/perfil/trocar-senha/solicitar', methods=['POST'])
+@require_auth
+def solicitar_troca_senha():
+    """Envia código 2FA por email para confirmar troca de senha"""
+    sb   = get_sb()
+    res  = sb.table('users').select('*').eq('id', g.user_id).execute()
+    if not res.data: return jsonify({'error': 'Usuário não encontrado'}), 404
+    user = res.data[0]
+    if not user.get('email'): return jsonify({'error': 'Conta sem email cadastrado'}), 400
+    codigo = gerar_codigo()
+    exp    = (datetime.utcnow() + timedelta(minutes=15)).isoformat()
+    sb.table('users').update({'verify_code': codigo, 'verify_exp': exp}).eq('id', g.user_id).execute()
+    email_troca_senha(user['email'], user['name'], codigo)
+    return jsonify({'ok': True, 'email': user['email']})
+
+@app.route('/api/perfil/trocar-senha/confirmar', methods=['POST'])
+@require_auth
+def confirmar_troca_senha():
+    d         = request.get_json()
+    codigo    = d.get('code','').strip()
+    nova_pw   = d.get('password','')
+    if len(nova_pw) < 6: return jsonify({'error': 'Senha mínimo 6 caracteres'}), 400
+    sb  = get_sb()
+    res = sb.table('users').select('*').eq('id', g.user_id).execute()
+    if not res.data: return jsonify({'error': 'Usuário não encontrado'}), 404
+    user = res.data[0]
+    now  = datetime.utcnow().isoformat()
+    if user.get('verify_code') != codigo:
+        return jsonify({'error': 'Código incorreto'}), 400
+    if user.get('verify_exp') and now > user['verify_exp']:
+        return jsonify({'error': 'Código expirado. Solicite novamente.'}), 400
+    sb.table('users').update({
+        'password': hash_password(nova_pw),
+        'verify_code': None, 'verify_exp': None
+    }).eq('id', g.user_id).execute()
+    return jsonify({'ok': True})
+
+@app.route('/api/perfil/excluir/solicitar', methods=['POST'])
+@require_auth
+def solicitar_exclusao():
+    """Envia código 2FA por email para confirmar exclusão de conta"""
+    sb   = get_sb()
+    res  = sb.table('users').select('*').eq('id', g.user_id).execute()
+    if not res.data: return jsonify({'error': 'Usuário não encontrado'}), 404
+    user = res.data[0]
+    if not user.get('email'): return jsonify({'error': 'Conta sem email cadastrado'}), 400
+    codigo = gerar_codigo()
+    exp    = (datetime.utcnow() + timedelta(minutes=15)).isoformat()
+    sb.table('users').update({'verify_code': codigo, 'verify_exp': exp}).eq('id', g.user_id).execute()
+    email_exclusao_conta(user['email'], user['name'], codigo)
+    return jsonify({'ok': True, 'email': user['email']})
+
+@app.route('/api/perfil/excluir/confirmar', methods=['POST'])
+@require_auth
+def confirmar_exclusao():
+    d      = request.get_json()
+    codigo = d.get('code','').strip()
+    sb     = get_sb()
+    res    = sb.table('users').select('*').eq('id', g.user_id).execute()
+    if not res.data: return jsonify({'error': 'Usuário não encontrado'}), 404
+    user = res.data[0]
+    now  = datetime.utcnow().isoformat()
+    if user.get('verify_code') != codigo:
+        return jsonify({'error': 'Código incorreto'}), 400
+    if user.get('verify_exp') and now > user['verify_exp']:
+        return jsonify({'error': 'Código expirado. Solicite novamente.'}), 400
+    # Apagar fotos do storage
+    try:
+        rows = sb.table('despesas').select('photo_path').eq('user_id', g.user_id).execute()
+        paths = [r['photo_path'] for r in rows.data if r.get('photo_path')]
+        if paths: sb.storage.from_('recibos').remove(paths)
+    except: pass
+    # Apagar todos os dados do usuário
+    sb.table('despesas').delete().eq('user_id', g.user_id).execute()
+    sb.table('receitas').delete().eq('user_id', g.user_id).execute()
+    sb.table('categorias').delete().eq('user_id', g.user_id).execute()
+    sb.table('metas').delete().eq('user_id', g.user_id).execute()
+    sb.table('recorrentes').delete().eq('user_id', g.user_id).execute()
+    sb.table('parcelamentos').delete().eq('user_id', g.user_id).execute()
+    sb.table('pagamentos').delete().eq('user_id', g.user_id).execute()
+    sb.table('users').delete().eq('id', g.user_id).execute()
+    return jsonify({'ok': True})
 @app.route('/api/conta/status', methods=['GET'])
 @require_auth
 def conta_status():
