@@ -1035,6 +1035,7 @@ async function addEntry(cat,val){
 }
 
 async function deleteEntry(id){
+  if(!confirm('Remover este lançamento?'))return;
   try{await api('/api/despesas/'+id,{method:'DELETE'});entries=entries.filter(e=>e.id!==id);render();showToast('Removido')}catch(e){showToast('Erro',true)}
 }
 
@@ -1692,6 +1693,7 @@ async function addReceita(){
 }
 
 async function deleteReceita(id){
+  if(!confirm('Remover esta receita?'))return;
   try{
     await api('/api/receitas/'+id,{method:'DELETE'});
     receitas=receitas.filter(r=>r.id!==id);
