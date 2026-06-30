@@ -586,7 +586,7 @@ def delete_categoria(cid):
 @require_auth
 def get_despesas():
     sb   = get_sb()
-    rows = sb.table('despesas').select('*').eq('user_id', g.user_id).order('ts', desc=True).execute()
+    rows = sb.table('despesas').select('*').eq('user_id', g.user_id).is_('deleted_at', 'null').order('ts', desc=True).execute()
     result = []
     for e in rows.data:
         if e.get('photo_data'):
@@ -637,27 +637,102 @@ def edit_despesa(eid):
 @app.route('/api/despesas/<int:eid>', methods=['DELETE'])
 @require_auth
 def delete_despesa(eid):
+    """Soft delete: marca como excluído, mantém por 15 dias na lixeira"""
     sb  = get_sb()
     row = sb.table('despesas').select('*').eq('id', eid).eq('user_id', g.user_id).execute()
     if not row.data: return jsonify({'error': 'Não encontrado'}), 404
-    e = row.data[0]
-    # Remover foto do storage se existir
-    if e.get('photo_path'):
-        try: sb.storage.from_('recibos').remove([e['photo_path']])
-        except: pass
-    sb.table('despesas').delete().eq('id', eid).execute()
+    sb.table('despesas').update({'deleted_at': datetime.utcnow().isoformat()}).eq('id', eid).execute()
     return jsonify({'ok': True})
 
 @app.route('/api/despesas/clear', methods=['POST'])
 @require_auth
 def clear_despesas():
-    sb   = get_sb()
-    rows = sb.table('despesas').select('photo_path').eq('user_id', g.user_id).execute()
-    paths = [r['photo_path'] for r in rows.data if r.get('photo_path')]
-    if paths:
-        try: sb.storage.from_('recibos').remove(paths)
+    """Soft delete em massa de todas as despesas ativas"""
+    sb  = get_sb()
+    now = datetime.utcnow().isoformat()
+    sb.table('despesas').update({'deleted_at': now}).eq('user_id', g.user_id).is_('deleted_at', 'null').execute()
+    return jsonify({'ok': True})
+
+# ── LIXEIRA ──────────────────────────────────────────────
+@app.route('/api/lixeira', methods=['GET'])
+@require_auth
+def get_lixeira():
+    sb     = get_sb()
+    limite = (datetime.utcnow() - timedelta(days=15)).isoformat()
+    # Purgar itens com mais de 15 dias automaticamente
+    try:
+        old_desp = sb.table('despesas').select('id,photo_path').eq('user_id', g.user_id).not_.is_('deleted_at','null').lt('deleted_at', limite).execute()
+        for od in (old_desp.data or []):
+            if od.get('photo_path'):
+                try: sb.storage.from_('recibos').remove([od['photo_path']])
+                except: pass
+        if old_desp.data:
+            ids = [od['id'] for od in old_desp.data]
+            sb.table('despesas').delete().in_('id', ids).execute()
+        sb.table('receitas').delete().eq('user_id', g.user_id).not_.is_('deleted_at','null').lt('deleted_at', limite).execute()
+    except: pass
+
+    despesas = sb.table('despesas').select('*').eq('user_id', g.user_id).not_.is_('deleted_at','null').order('deleted_at', desc=True).execute()
+    receitas = sb.table('receitas').select('*').eq('user_id', g.user_id).not_.is_('deleted_at','null').order('deleted_at', desc=True).execute()
+
+    result = []
+    for e in (despesas.data or []):
+        if e.get('photo_data'):
+            e['photo_inline'] = 'data:image/jpeg;base64,' + e['photo_data']
+        e.pop('photo_data', None)
+        e['_tipo'] = 'despesa'
+        result.append(e)
+    for r in (receitas.data or []):
+        r['_tipo'] = 'receita'
+        result.append(r)
+    result.sort(key=lambda x: x.get('deleted_at') or '', reverse=True)
+    return jsonify(result)
+
+@app.route('/api/lixeira/<tipo>/<int:item_id>/restaurar', methods=['POST'])
+@require_auth
+def restaurar_item(tipo, item_id):
+    sb    = get_sb()
+    table = 'despesas' if tipo == 'despesa' else 'receitas'
+    row   = sb.table(table).select('id').eq('id', item_id).eq('user_id', g.user_id).execute()
+    if not row.data: return jsonify({'error': 'Não encontrado'}), 404
+    sb.table(table).update({'deleted_at': None}).eq('id', item_id).execute()
+    return jsonify({'ok': True})
+
+@app.route('/api/lixeira/<tipo>/<int:item_id>', methods=['DELETE'])
+@require_auth
+def excluir_definitivo(tipo, item_id):
+    sb    = get_sb()
+    table = 'despesas' if tipo == 'despesa' else 'receitas'
+    row   = sb.table(table).select('*').eq('id', item_id).eq('user_id', g.user_id).execute()
+    if not row.data: return jsonify({'error': 'Não encontrado'}), 404
+    item = row.data[0]
+    if tipo == 'despesa' and item.get('photo_path'):
+        try: sb.storage.from_('recibos').remove([item['photo_path']])
         except: pass
-    sb.table('despesas').delete().eq('user_id', g.user_id).execute()
+    sb.table(table).delete().eq('id', item_id).execute()
+    return jsonify({'ok': True})
+
+@app.route('/api/lixeira/restaurar-tudo', methods=['POST'])
+@require_auth
+def restaurar_tudo():
+    sb = get_sb()
+    sb.table('despesas').update({'deleted_at': None}).eq('user_id', g.user_id).not_.is_('deleted_at','null').execute()
+    sb.table('receitas').update({'deleted_at': None}).eq('user_id', g.user_id).not_.is_('deleted_at','null').execute()
+    return jsonify({'ok': True})
+
+@app.route('/api/lixeira/limpar-tudo', methods=['POST'])
+@require_auth
+def limpar_lixeira_tudo():
+    sb = get_sb()
+    despesas_del = sb.table('despesas').select('id,photo_path').eq('user_id', g.user_id).not_.is_('deleted_at','null').execute()
+    for d in (despesas_del.data or []):
+        if d.get('photo_path'):
+            try: sb.storage.from_('recibos').remove([d['photo_path']])
+            except: pass
+    if despesas_del.data:
+        ids = [d['id'] for d in despesas_del.data]
+        sb.table('despesas').delete().in_('id', ids).execute()
+    sb.table('receitas').delete().eq('user_id', g.user_id).not_.is_('deleted_at','null').execute()
     return jsonify({'ok': True})
 
 # ── RECEITAS ─────────────────────────────────────────────
@@ -665,7 +740,7 @@ def clear_despesas():
 @require_auth
 def get_receitas():
     sb   = get_sb()
-    rows = sb.table('receitas').select('*').eq('user_id', g.user_id).order('ts', desc=True).execute()
+    rows = sb.table('receitas').select('*').eq('user_id', g.user_id).is_('deleted_at', 'null').order('ts', desc=True).execute()
     return jsonify(rows.data or [])
 
 @app.route('/api/receitas', methods=['POST'])
@@ -685,10 +760,11 @@ def add_receita():
 @app.route('/api/receitas/<int:rid>', methods=['DELETE'])
 @require_auth
 def delete_receita(rid):
+    """Soft delete: marca como excluída, mantém por 15 dias na lixeira"""
     sb  = get_sb()
     row = sb.table('receitas').select('id').eq('id', rid).eq('user_id', g.user_id).execute()
     if not row.data: return jsonify({'error': 'Não encontrado'}), 404
-    sb.table('receitas').delete().eq('id', rid).execute()
+    sb.table('receitas').update({'deleted_at': datetime.utcnow().isoformat()}).eq('id', rid).execute()
     return jsonify({'ok': True})
 
 # ── METAS ─────────────────────────────────────────────────
