@@ -248,14 +248,17 @@ def require_auth(f):
             payload = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
             g.user_id = payload['sub']
             g.role    = payload.get('role', 'user')
-            # Validar sessão única: se o session_id do token não bate com o salvo no banco,
-            # significa que um login mais recente substituiu esta sessão
+            # Validar sessão única: o session_id do token precisa bater exatamente
+            # com o que está salvo no banco. Se o usuário logar em outro lugar,
+            # o banco é atualizado e este token (antigo) deixa de ser válido.
+            # Tokens sem 'sid' (emitidos antes desta feature) também são invalidados,
+            # forçando um único login limpo.
             token_sid = payload.get('sid')
-            if token_sid:
-                sb = get_sb()
-                res = sb.table('users').select('session_id').eq('id', g.user_id).execute()
-                if res.data and res.data[0].get('session_id') and res.data[0]['session_id'] != token_sid:
-                    return jsonify({'error': 'sessao_encerrada', 'message': 'Sua sessão foi encerrada porque sua conta foi acessada em outro dispositivo.'}), 401
+            sb  = get_sb()
+            res = sb.table('users').select('session_id').eq('id', g.user_id).execute()
+            current_sid = res.data[0].get('session_id') if res.data else None
+            if current_sid and token_sid != current_sid:
+                return jsonify({'error': 'sessao_encerrada', 'message': 'Sua sessão foi encerrada porque sua conta foi acessada em outro dispositivo.'}), 401
         except jwt.ExpiredSignatureError:
             return jsonify({'error': 'Sessão expirada'}), 401
         except Exception:
