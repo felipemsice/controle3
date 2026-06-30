@@ -29,7 +29,7 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
 .err.show{display:block}
 
 /* APP */
-.wrap{display:none;max-width:900px;margin:0 auto;padding:0 0 3rem}
+.wrap{display:none;max-width:900px;margin:0 auto;padding:0 0 6rem}
 .hero{background:linear-gradient(160deg,#0d1117,#060d18);border-bottom:1px solid var(--border);padding:env(safe-area-inset-top,16px) 20px 20px;position:relative;overflow:hidden}
 .hero::before{content:'π';position:absolute;right:-10px;top:-20px;font-size:120px;font-weight:700;color:rgba(0,212,255,.04);line-height:1;pointer-events:none;font-family:serif}
 .hero-top{display:flex;justify-content:space-between;align-items:center;padding-top:8px}
@@ -136,6 +136,20 @@ tr:hover td{background:var(--bg2)}
 .viewer-close{position:absolute;top:20px;right:20px;width:40px;height:40px;border-radius:50%;background:rgba(0,212,255,.1);border:1px solid var(--border);color:var(--cyan);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .empty{text-align:center;padding:3rem;color:var(--text-3);font-size:14px}
 .empty i{font-size:36px;display:block;margin-bottom:8px;opacity:.2}
+/* BOTTOM NAV */
+.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:rgba(20,20,30,.92);backdrop-filter:blur(12px);border-top:1px solid var(--border2);display:flex;align-items:center;justify-content:space-around;padding:8px 12px calc(8px + env(safe-area-inset-bottom));z-index:60}
+.bn-btn{background:none;border:none;color:var(--text-3);font-size:21px;cursor:pointer;display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%;font-family:inherit;text-decoration:none}
+.bn-btn:active{background:var(--bg2)}
+.bn-btn.active{color:var(--cyan)}
+.bn-menu{position:fixed;left:50%;transform:translateX(-50%);bottom:0;width:100%;max-width:480px;background:var(--surface2);border-radius:18px 18px 0 0;border:1px solid var(--border);border-bottom:none;padding:10px 10px calc(10px + env(safe-area-inset-bottom));z-index:101;display:none}
+.bn-menu.open{display:block}
+.bn-menu-item{display:flex;align-items:center;gap:12px;width:100%;height:50px;padding:0 12px;background:none;border:none;color:var(--text);font-size:15px;font-weight:500;cursor:pointer;font-family:inherit;text-align:left;border-radius:10px;text-decoration:none}
+.bn-menu-item:active{background:var(--bg2)}
+.bn-menu-item i{font-size:18px;color:var(--cyan);width:20px;text-align:center;flex-shrink:0}
+.bn-menu-item.danger i,.bn-menu-item.danger{color:var(--red)}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:100;align-items:flex-end;justify-content:center;backdrop-filter:blur(4px)}
+.modal-overlay.open{display:flex}
+
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--surface2);color:var(--cyan);border:1px solid var(--border);font-size:14px;font-weight:500;padding:12px 22px;border-radius:999px;white-space:nowrap;transition:transform .3s cubic-bezier(.34,1.56,.64,1),opacity .3s;opacity:0;z-index:999;pointer-events:none;box-shadow:0 8px 24px var(--cyan-glow)}
 .toast.show{transform:translateX(-50%) translateY(0);opacity:1}
 .toast.error{background:var(--red-light);color:var(--red);border-color:rgba(255,71,87,.3);box-shadow:none}
@@ -268,6 +282,23 @@ tr:hover td{background:var(--bg2)}
         </div>
       </div>
     </div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <div class="bottom-nav">
+    <a href="/" class="bn-btn" title="Voltar ao app"><i class="ti ti-home"></i></a>
+    <button class="bn-btn" onclick="bnGoFiltros()" title="Filtros"><i class="ti ti-filter"></i></button>
+    <button class="bn-btn active" onclick="exportExcel()" title="Exportar Excel"><i class="ti ti-file-spreadsheet"></i></button>
+    <button class="bn-btn" onclick="toggleBnMenu()" title="Mais opções"><i class="ti ti-dots"></i></button>
+  </div>
+</div>
+
+<!-- MENU "MAIS" (3 PONTINHOS) -->
+<div class="modal-overlay" id="bn-menu-overlay" onclick="if(event.target===this)toggleBnMenu()">
+  <div class="bn-menu open">
+    <a class="bn-menu-item" href="/?open=perfil"><i class="ti ti-user-circle"></i> Meu perfil</a>
+    <a class="bn-menu-item" href="/?open=categorias"><i class="ti ti-settings"></i> Categorias</a>
+    <button class="bn-menu-item danger" onclick="toggleBnMenu();doLogout()"><i class="ti ti-logout"></i> Sair</button>
   </div>
 </div>
 
@@ -577,6 +608,15 @@ function renderTable(){
   }
 }
 function changePage(dir){page+=dir;renderTable()}
+
+// BOTTOM NAV
+function toggleBnMenu(){
+  document.getElementById('bn-menu-overlay').classList.toggle('open');
+}
+function bnGoFiltros(){
+  document.querySelector('.filters').scrollIntoView({behavior:'smooth',block:'start'});
+  setTimeout(()=>document.getElementById('f-year').focus(),350);
+}
 
 function exportExcel(){
   if(!filtered.length){showToast('Nenhum dado para exportar',true);return}
