@@ -647,8 +647,6 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
   <div class="bn-menu open">
     <button class="bn-menu-item" onclick="toggleBnMenu();openPerfilModal()"><i class="ti ti-user-circle"></i> Meu perfil</button>
     <button class="bn-menu-item" onclick="toggleBnMenu();openCatModal()"><i class="ti ti-settings"></i> Categorias</button>
-    <button class="bn-menu-item" onclick="toggleBnMenu();openMetasModal()"><i class="ti ti-target"></i> Metas</button>
-    <button class="bn-menu-item" onclick="toggleBnMenu();openLixeiraModal()"><i class="ti ti-trash"></i> Lixeira</button>
     <button class="bn-menu-item danger" onclick="toggleBnMenu();doLogout()"><i class="ti ti-logout"></i> Sair</button>
   </div>
 </div>
@@ -1115,7 +1113,15 @@ function showApp(){
     if(contaStatus&&contaStatus.status==='trial'&&!localStorage.getItem('trial_modal_shown')){
       showTrialModal(contaStatus.trial_dias||30);
     }
-    loadCategorias().then(()=>loadEntries());
+    loadCategorias().then(()=>{
+      loadEntries();
+      // Abrir atalho vindo de outra página (ex: menu da tela de relatórios)
+      const params=new URLSearchParams(window.location.search);
+      const open=params.get('open');
+      if(open==='perfil')openPerfilModal();
+      else if(open==='categorias')openCatModal();
+      if(open){history.replaceState(null,'','/')}
+    });
   });
 }
 
