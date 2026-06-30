@@ -286,9 +286,7 @@ tr:hover td{background:var(--bg2)}
 
   <!-- BOTTOM NAV -->
   <div class="bottom-nav">
-    <a href="/" class="bn-btn" title="Voltar ao app"><i class="ti ti-home"></i></a>
-    <button class="bn-btn" onclick="bnGoFiltros()" title="Filtros"><i class="ti ti-filter"></i></button>
-    <button class="bn-btn active" onclick="exportExcel()" title="Exportar Excel"><i class="ti ti-file-spreadsheet"></i></button>
+    <a href="/" class="bn-btn active" title="Voltar ao app"><i class="ti ti-home"></i></a>
     <button class="bn-btn" onclick="toggleBnMenu()" title="Mais opções"><i class="ti ti-dots"></i></button>
   </div>
 </div>
@@ -297,7 +295,6 @@ tr:hover td{background:var(--bg2)}
 <div class="modal-overlay" id="bn-menu-overlay" onclick="if(event.target===this)toggleBnMenu()">
   <div class="bn-menu open">
     <a class="bn-menu-item" href="/?open=perfil"><i class="ti ti-user-circle"></i> Meu perfil</a>
-    <a class="bn-menu-item" href="/?open=categorias"><i class="ti ti-settings"></i> Categorias</a>
     <button class="bn-menu-item danger" onclick="toggleBnMenu();doLogout()"><i class="ti ti-logout"></i> Sair</button>
   </div>
 </div>
@@ -612,10 +609,6 @@ function changePage(dir){page+=dir;renderTable()}
 // BOTTOM NAV
 function toggleBnMenu(){
   document.getElementById('bn-menu-overlay').classList.toggle('open');
-}
-function bnGoFiltros(){
-  document.querySelector('.filters').scrollIntoView({behavior:'smooth',block:'start'});
-  setTimeout(()=>document.getElementById('f-year').focus(),350);
 }
 
 function exportExcel(){
