@@ -47,8 +47,13 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
 .field input:focus{outline:none;border-color:var(--cyan);box-shadow:0 0 0 3px var(--cyan-glow)}
 .field .hint{font-size:12px;color:var(--text-3);margin-top:4px}
 .btn{width:100%;height:50px;border-radius:var(--radius-sm);border:none;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s}
-.btn-primary{background:linear-gradient(135deg,var(--cyan),var(--cyan-dark));color:#000;font-weight:700}
+.btn-google{width:100%;height:48px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:#fff;color:#1a1a1a;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:10px;transition:opacity .15s}
+.btn-google:active{opacity:.85}
+.btn-google svg{flex-shrink:0}
 .btn-primary:active{opacity:.85;transform:scale(.99)}
+.btn-google{width:100%;height:48px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:#fff;color:#1a1a1a;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:10px;transition:opacity .15s;margin-bottom:10px}
+.btn-google:active{opacity:.85}
+.btn-google svg{flex-shrink:0}
 .btn-ghost{background:none;color:var(--cyan);font-size:14px;height:40px;margin-top:6px;border:none;cursor:pointer;font-family:inherit;width:100%}
 .btn-ghost:hover{text-decoration:underline}
 .divider{text-align:center;font-size:13px;color:var(--text-3);margin:14px 0}
@@ -221,6 +226,11 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
       <p>Controle financeiro inteligente</p>
     </div>
     <div class="err" id="login-err"></div>
+    <button class="btn-google" onclick="window.location.href='/auth/google/login'">
+      <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84c-.21 1.13-.84 2.08-1.8 2.72v2.26h2.92c1.7-1.57 2.68-3.88 2.68-6.62z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.81 5.96-2.18l-2.92-2.26c-.81.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.7H.96v2.33C2.44 15.98 5.48 18 9 18z"/><path fill="#FBBC05" d="M3.97 10.72c-.18-.54-.28-1.12-.28-1.72s.1-1.18.28-1.72V4.95H.96C.35 6.17 0 7.55 0 9s.35 2.83.96 4.05l3.01-2.33z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.51.45 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0 5.48 0 2.44 2.02.96 4.95l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58z"/></svg>
+      Continuar com Google
+    </button>
+    <div class="divider">ou</div>
     <div class="field"><label>E-mail</label><input type="email" id="login-email" placeholder="seu@email.com" autocomplete="email" inputmode="email"></div>
     <div class="field"><label>Senha</label><input type="password" id="login-pw" placeholder="••••••" autocomplete="current-password"></div>
     <button class="btn btn-primary" onclick="doLogin()">Entrar</button>
@@ -327,6 +337,7 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
       <div style="display:flex;align-items:center;gap:8px">
         <span class="hero-badge" id="month-label"></span>
         <a href="/relatorios" onclick="return checkRelatorios(event)" style="background:rgba(0,212,255,.1);border:1px solid var(--border);color:var(--cyan);font-size:12px;padding:6px 10px;border-radius:8px;cursor:pointer;text-decoration:none;display:flex;align-items:center;gap:4px"><i class="ti ti-chart-bar" style="font-size:14px"></i></a>
+        <button onclick="openPerfilModal()" style="background:rgba(0,212,255,.1);border:1px solid var(--border);color:var(--cyan);font-size:12px;padding:6px 10px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:4px" title="Perfil"><i class="ti ti-user-circle" style="font-size:14px"></i></button>
         <button class="logout-btn" onclick="doLogout()"><i class="ti ti-logout" style="font-size:14px"></i></button>
       </div>
     </div>
@@ -339,7 +350,132 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
   </div>
   <div id="status-banner"></div>
 
-  <!-- MODAL LIMITE DE PLANO -->
+  <!-- MODAL PERFIL -->
+<div class="modal-overlay" id="perfil-modal">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-title">Meu perfil</div>
+
+    <!-- TELA PRINCIPAL -->
+    <div id="perfil-view-main">
+      <div style="text-align:center;margin-bottom:18px">
+        <div style="width:64px;height:64px;border-radius:50%;background:rgba(0,212,255,.1);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;margin:0 auto 10px;font-size:24px;font-weight:700;color:var(--cyan)" id="perfil-avatar"></div>
+        <div style="font-size:16px;font-weight:700;color:var(--text)" id="perfil-nome"></div>
+        <div style="font-size:13px;color:var(--text-3)" id="perfil-email"></div>
+      </div>
+
+      <div style="background:var(--bg2);border-radius:var(--radius-sm);padding:14px;margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <span style="font-size:12px;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;font-weight:700">Plano</span>
+          <span id="perfil-plano-badge"></span>
+        </div>
+        <div id="perfil-plano-detalhe" style="font-size:13px;color:var(--text-2);line-height:1.5"></div>
+      </div>
+
+      <div style="background:var(--bg2);border-radius:var(--radius-sm);padding:14px;margin-bottom:18px;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:13px;color:var(--text-2)">Status da conta</span>
+        <span id="perfil-status-badge"></span>
+      </div>
+
+      <button class="modal-btn" onclick="showPerfilView('perfil-view-trocar-senha')" style="width:100%;margin-bottom:8px;justify-content:flex-start;gap:10px">
+        <i class="ti ti-key" style="font-size:17px;color:var(--cyan)"></i> Trocar senha
+      </button>
+      <button class="modal-btn" onclick="showPerfilView('perfil-view-suporte')" style="width:100%;margin-bottom:8px;justify-content:flex-start;gap:10px">
+        <i class="ti ti-headset" style="font-size:17px;color:var(--cyan)"></i> Falar com suporte
+      </button>
+      <button class="modal-btn" onclick="showPerfilView('perfil-view-excluir')" style="width:100%;margin-bottom:14px;justify-content:flex-start;gap:10px;border-color:rgba(255,71,87,.3);color:var(--red)">
+        <i class="ti ti-trash" style="font-size:17px;color:var(--red)"></i> Excluir minha conta
+      </button>
+      <button class="modal-cancel" onclick="closePerfilModal()">Fechar</button>
+    </div>
+
+    <!-- TROCAR SENHA - PASSO 1 -->
+    <div id="perfil-view-trocar-senha" style="display:none">
+      <button onclick="backToMain()" style="background:none;border:none;color:var(--text-3);font-size:13px;cursor:pointer;margin-bottom:14px;display:flex;align-items:center;gap:4px"><i class="ti ti-chevron-left"></i> Voltar</button>
+      <div style="text-align:center;margin-bottom:18px">
+        <i class="ti ti-key" style="font-size:36px;color:var(--cyan)"></i>
+        <div style="font-size:15px;font-weight:600;color:var(--text);margin-top:8px">Trocar senha</div>
+        <div style="font-size:13px;color:var(--text-3);margin-top:4px">Enviaremos um código de confirmação por email</div>
+      </div>
+      <div class="err" id="trocar-senha-err"></div>
+      <button class="modal-btn primary" onclick="solicitarTrocaSenha()" style="width:100%">
+        <i class="ti ti-mail"></i> Enviar código por email
+      </button>
+    </div>
+
+    <!-- TROCAR SENHA - PASSO 2 -->
+    <div id="perfil-view-trocar-senha-codigo" style="display:none">
+      <button onclick="showPerfilView('perfil-view-trocar-senha')" style="background:none;border:none;color:var(--text-3);font-size:13px;cursor:pointer;margin-bottom:14px;display:flex;align-items:center;gap:4px"><i class="ti ti-chevron-left"></i> Voltar</button>
+      <div style="text-align:center;margin-bottom:14px">
+        <i class="ti ti-mail-check" style="font-size:36px;color:var(--cyan)"></i>
+        <div style="font-size:15px;font-weight:600;color:var(--text);margin-top:8px">Digite o código</div>
+        <div style="font-size:13px;color:var(--text-3);margin-top:4px" id="trocar-senha-email-hint"></div>
+      </div>
+      <div class="err" id="trocar-senha-2-err"></div>
+      <div class="field"><input class="code-input" type="text" id="trocar-senha-codigo" placeholder="000000" maxlength="6" inputmode="numeric" style="color:var(--cyan)"></div>
+      <div class="field"><label>Nova senha</label><input type="password" id="trocar-senha-nova" placeholder="Mínimo 6 caracteres"></div>
+      <button class="modal-btn primary" onclick="confirmarTrocaSenha()" style="width:100%"><i class="ti ti-check"></i> Confirmar nova senha</button>
+    </div>
+
+    <!-- SUPORTE -->
+    <div id="perfil-view-suporte" style="display:none">
+      <button onclick="backToMain()" style="background:none;border:none;color:var(--text-3);font-size:13px;cursor:pointer;margin-bottom:14px;display:flex;align-items:center;gap:4px"><i class="ti ti-chevron-left"></i> Voltar</button>
+      <div style="text-align:center;margin-bottom:20px">
+        <i class="ti ti-headset" style="font-size:36px;color:var(--cyan)"></i>
+        <div style="font-size:15px;font-weight:600;color:var(--text);margin-top:8px">Fale com a gente</div>
+        <div style="font-size:13px;color:var(--text-3);margin-top:4px">Estamos aqui para ajudar</div>
+      </div>
+      <a href="mailto:contato@nexapi.com.br" style="display:flex;align-items:center;gap:12px;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:14px;margin-bottom:10px;text-decoration:none;color:var(--text)">
+        <i class="ti ti-mail" style="font-size:22px;color:var(--cyan)"></i>
+        <div>
+          <div style="font-size:13px;font-weight:600">E-mail</div>
+          <div style="font-size:12px;color:var(--text-3)">contato@nexapi.com.br</div>
+        </div>
+      </a>
+      <a href="https://wa.me/5511985841189" target="_blank" style="display:flex;align-items:center;gap:12px;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:14px;margin-bottom:14px;text-decoration:none;color:var(--text)">
+        <i class="ti ti-brand-whatsapp" style="font-size:22px;color:#25d366"></i>
+        <div>
+          <div style="font-size:13px;font-weight:600">WhatsApp</div>
+          <div style="font-size:12px;color:var(--text-3)">(11) 98584-1189</div>
+        </div>
+      </a>
+      <button class="modal-cancel" onclick="backToMain()">Voltar ao perfil</button>
+    </div>
+
+    <!-- EXCLUIR CONTA - PASSO 1 -->
+    <div id="perfil-view-excluir" style="display:none">
+      <button onclick="backToMain()" style="background:none;border:none;color:var(--text-3);font-size:13px;cursor:pointer;margin-bottom:14px;display:flex;align-items:center;gap:4px"><i class="ti ti-chevron-left"></i> Voltar</button>
+      <div style="text-align:center;margin-bottom:16px">
+        <i class="ti ti-alert-triangle" style="font-size:36px;color:var(--red)"></i>
+        <div style="font-size:15px;font-weight:600;color:var(--red);margin-top:8px">Excluir conta permanentemente</div>
+      </div>
+      <div style="background:rgba(255,71,87,.08);border:1px solid rgba(255,71,87,.25);border-radius:var(--radius-sm);padding:14px;margin-bottom:18px;font-size:13px;color:var(--text-2);line-height:1.6">
+        Esta ação é <strong style="color:var(--red)">irreversível</strong>. Todos os seus lançamentos, fotos, receitas, metas e dados serão apagados permanentemente. Não será possível recuperar.
+      </div>
+      <div class="err" id="excluir-err"></div>
+      <button class="modal-btn" style="width:100%;margin-bottom:8px;border-color:rgba(255,71,87,.4);color:var(--red)" onclick="solicitarExclusao()">
+        <i class="ti ti-mail"></i> Enviar código de confirmação
+      </button>
+      <button class="modal-cancel" onclick="backToMain()">Cancelar, manter minha conta</button>
+    </div>
+
+    <!-- EXCLUIR CONTA - PASSO 2 -->
+    <div id="perfil-view-excluir-codigo" style="display:none">
+      <button onclick="showPerfilView('perfil-view-excluir')" style="background:none;border:none;color:var(--text-3);font-size:13px;cursor:pointer;margin-bottom:14px;display:flex;align-items:center;gap:4px"><i class="ti ti-chevron-left"></i> Voltar</button>
+      <div style="text-align:center;margin-bottom:14px">
+        <i class="ti ti-mail-check" style="font-size:36px;color:var(--red)"></i>
+        <div style="font-size:15px;font-weight:600;color:var(--text);margin-top:8px">Confirme a exclusão</div>
+        <div style="font-size:13px;color:var(--text-3);margin-top:4px" id="excluir-email-hint"></div>
+      </div>
+      <div class="err" id="excluir-2-err"></div>
+      <div class="field"><input class="code-input" type="text" id="excluir-codigo" placeholder="000000" maxlength="6" inputmode="numeric" style="color:var(--red)"></div>
+      <button class="modal-btn" style="width:100%;background:var(--red);color:#fff;border:none" onclick="confirmarExclusao()">
+        <i class="ti ti-trash"></i> Excluir minha conta definitivamente
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL LIMITE DE PLANO -->
   <div class="modal-overlay" id="limite-modal">
     <div class="modal" style="text-align:center;padding:28px 24px 24px">
       <div style="font-size:48px;margin-bottom:8px" id="limite-icon">⚠️</div>
@@ -1367,6 +1503,109 @@ async function deleteParcelamento(id){
 }
 
 
+// ── PERFIL ───────────────────────────────────────────────
+function showPerfilView(viewId){
+  ['perfil-view-main','perfil-view-trocar-senha','perfil-view-trocar-senha-codigo','perfil-view-suporte','perfil-view-excluir','perfil-view-excluir-codigo'].forEach(v=>{
+    const el=document.getElementById(v);
+    if(el)el.style.display=v===viewId?'block':'none';
+  });
+}
+function backToMain(){showPerfilView('perfil-view-main')}
+
+async function openPerfilModal(){
+  showPerfilView('perfil-view-main');
+  document.getElementById('perfil-modal').classList.add('open');
+  try{
+    const p=await api('/api/perfil');
+    document.getElementById('perfil-avatar').textContent=(p.name||'?')[0].toUpperCase();
+    document.getElementById('perfil-nome').textContent=p.name||'—';
+    document.getElementById('perfil-email').textContent=p.email||'—';
+
+    const s=p.status||{};
+    const nomes={basico:'Básico',standard:'Standard',premium:'Premium'};
+    let badgeHtml='',detalheHtml='';
+    if(s.status==='trial'){
+      badgeHtml='<span style="background:rgba(255,165,2,.12);color:var(--amber);font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;border:1px solid rgba(255,165,2,.3)">TRIAL</span>';
+      detalheHtml=`Período de teste · <strong style="color:var(--amber)">${s.trial_dias} dias restantes</strong><br><a href="/assinar" style="color:var(--cyan);font-size:12px">Ver planos disponíveis →</a>`;
+    }else if(s.status==='ativo'){
+      const ilimitado=s.limite>=999999;
+      badgeHtml=`<span style="background:rgba(0,212,255,.12);color:var(--cyan);font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;border:1px solid var(--border)">${(nomes[s.plano]||s.plano).toUpperCase()}</span>`;
+      const dataFim=s.plano_end?new Date(s.plano_end).toLocaleDateString('pt-BR'):'—';
+      detalheHtml=`Ativo até <strong style="color:var(--text)">${dataFim}</strong> (${s.plano_dias} dias restantes)<br>${ilimitado?'Lançamentos ilimitados':`${s.uso_mes||0}/${s.limite} lançamentos este mês`}`;
+    }else if(s.status==='adm'){
+      badgeHtml='<span style="background:rgba(0,212,255,.12);color:var(--cyan);font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;border:1px solid var(--border)">ADMIN</span>';
+      detalheHtml='Acesso administrativo completo';
+    }else{
+      badgeHtml='<span style="background:var(--red-light);color:var(--red);font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;border:1px solid rgba(255,71,87,.3)">EXPIRADO</span>';
+      detalheHtml='Seu acesso expirou.<br><a href="/assinar" style="color:var(--cyan);font-size:12px">Assinar agora →</a>';
+    }
+    document.getElementById('perfil-plano-badge').innerHTML=badgeHtml;
+    document.getElementById('perfil-plano-detalhe').innerHTML=detalheHtml;
+
+    const statusBadge=p.active
+      ?'<span style="background:rgba(0,212,255,.12);color:var(--cyan);font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px"><i class="ti ti-circle-check" style="font-size:10px"></i> Ativo</span>'
+      :'<span style="background:var(--red-light);color:var(--red);font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px">Inativo</span>';
+    document.getElementById('perfil-status-badge').innerHTML=statusBadge;
+  }catch(e){showToast('Erro ao carregar perfil',true)}
+}
+
+function closePerfilModal(){document.getElementById('perfil-modal').classList.remove('open')}
+document.getElementById('perfil-modal').addEventListener('click',function(e){if(e.target===this)closePerfilModal()});
+
+// TROCAR SENHA
+async function solicitarTrocaSenha(){
+  hideErr('trocar-senha-err');
+  try{
+    const d=await api('/api/perfil/trocar-senha/solicitar',{method:'POST'});
+    if(d.error){showErr('trocar-senha-err',d.error);return}
+    document.getElementById('trocar-senha-email-hint').textContent='Código enviado para '+d.email;
+    document.getElementById('trocar-senha-codigo').value='';
+    document.getElementById('trocar-senha-nova').value='';
+    showPerfilView('perfil-view-trocar-senha-codigo');
+  }catch(e){showErr('trocar-senha-err','Erro ao enviar código')}
+}
+
+async function confirmarTrocaSenha(){
+  hideErr('trocar-senha-2-err');
+  const code=document.getElementById('trocar-senha-codigo').value.trim();
+  const pw=document.getElementById('trocar-senha-nova').value;
+  if(pw.length<6){showErr('trocar-senha-2-err','Senha mínimo 6 caracteres');return}
+  try{
+    const d=await api('/api/perfil/trocar-senha/confirmar',{method:'POST',body:JSON.stringify({code,password:pw})});
+    if(d.error){showErr('trocar-senha-2-err',d.error);return}
+    showToast('Senha alterada com sucesso!');
+    closePerfilModal();
+  }catch(e){showErr('trocar-senha-2-err','Erro ao confirmar')}
+}
+
+// EXCLUIR CONTA
+async function solicitarExclusao(){
+  hideErr('excluir-err');
+  try{
+    const d=await api('/api/perfil/excluir/solicitar',{method:'POST'});
+    if(d.error){showErr('excluir-err',d.error);return}
+    document.getElementById('excluir-email-hint').textContent='Código enviado para '+d.email;
+    document.getElementById('excluir-codigo').value='';
+    showPerfilView('perfil-view-excluir-codigo');
+  }catch(e){showErr('excluir-err','Erro ao enviar código')}
+}
+
+async function confirmarExclusao(){
+  hideErr('excluir-2-err');
+  const code=document.getElementById('excluir-codigo').value.trim();
+  if(!code){showErr('excluir-2-err','Digite o código');return}
+  if(!confirm('Tem certeza? Esta ação não pode ser desfeita.'))return;
+  try{
+    const d=await api('/api/perfil/excluir/confirmar',{method:'POST',body:JSON.stringify({code})});
+    if(d.error){showErr('excluir-2-err',d.error);return}
+    showToast('Conta excluída. Até logo!');
+    setTimeout(()=>{
+      authToken=null;localStorage.clear();
+      location.href='/';
+    },1500);
+  }catch(e){showErr('excluir-2-err','Erro ao excluir conta')}
+}
+
 function toggleTipoLanc(){
   tipoLanc=tipoLanc==='despesa'?'receita':'despesa';
   const btn=document.getElementById('btn-tipo-lanc');
@@ -1578,6 +1817,14 @@ micBtn.addEventListener('click',()=>{
   if(!recognition){setupSpeech();if(!recognition)return}
   if(listening){recognition.stop();stopListening()}else{try{recognition.start()}catch(e){recognition=null;setupSpeech();recognition&&recognition.start()}}
 });
+
+// Tratar erro de retorno do Google OAuth
+(function(){
+  const params=new URLSearchParams(window.location.search);
+  const err=params.get('error');
+  if(err==='google_failed'){showErr('login-err','Erro ao entrar com Google. Tente novamente.');window.history.replaceState({},'','/');}
+  if(err==='account_disabled'){showErr('login-err','Conta desativada. Contate o suporte.');window.history.replaceState({},'','/');}
+})();
 
 if(authToken&&userName)showApp();else show('screen-login');</script>
 </body>
