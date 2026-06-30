@@ -134,7 +134,7 @@ tr:hover td{background:var(--bg2)}
       <p>Faça login para continuar</p>
     </div>
     <div class="err" id="auth-err"></div>
-    <div class="field"><label>Telefone</label><input type="tel" id="auth-phone" placeholder="(11) 99999-9999" inputmode="tel"></div>
+    <div class="field"><label>E-mail</label><input type="email" id="auth-email" placeholder="seu@email.com" autocomplete="email" inputmode="email"></div>
     <div class="field"><label>Senha</label><input type="password" id="auth-pw" placeholder="••••••"></div>
     <button class="btn-login" onclick="doLogin()">Entrar</button>
   </div>
@@ -280,10 +280,10 @@ let toastTimer;
 function showToast(msg,isError=false){const t=document.getElementById('toast');t.textContent=msg;t.className='toast show'+(isError?' error':'');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.className='toast',2800)}
 
 async function doLogin(){
-  const phone=document.getElementById('auth-phone').value;
+  const email=document.getElementById('auth-email').value.trim().toLowerCase();
   const pw=document.getElementById('auth-pw').value;
   try{
-    const r=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone,password:pw})});
+    const r=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pw})});
     const d=await r.json();
     if(d.error){const e=document.getElementById('auth-err');e.textContent=d.error;e.classList.add('show');return}
     authToken=d.token;localStorage.setItem('token',authToken);localStorage.setItem('uname',d.name);
@@ -292,7 +292,7 @@ async function doLogin(){
     initYears();await loadCategorias();await loadEntries();
   }catch(e){const el=document.getElementById('auth-err');el.textContent='Erro de conexão';el.classList.add('show')}
 }
-function doLogout(){authToken=null;localStorage.removeItem('token');localStorage.removeItem('uname');location.reload()}
+function doLogout(){authToken=null;localStorage.removeItem('token');localStorage.removeItem('uname');window.location.href='/'}
 document.getElementById('auth-pw').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()});
 
 async function api(path){
