@@ -46,26 +46,11 @@ def get_sb() -> SupabaseClient:
 def hash_password(pw):
     return hashlib.sha256(pw.encode()).hexdigest()
 
-def make_token(user_id, role='user'):
+def make_token(user_id, role='user', session_id=None):
     payload = {'sub': user_id, 'role': role, 'exp': datetime.utcnow() + timedelta(days=30)}
+    if session_id:
+        payload['sid'] = session_id
     return jwt.encode(payload, SECRET_KEY, algorithm='HS256')
-
-def twilio_client():
-    return Client(TWILIO_SID, TWILIO_TOKEN)
-
-def send_sms_code(phone):
-    try:
-        twilio_client().verify.v2.services(TWILIO_VERIFY).verifications.create(to=phone, channel='sms')
-        return True
-    except Exception as e:
-        print(f"Erro SMS: {e}"); return False
-
-def check_sms_code(phone, code):
-    try:
-        r = twilio_client().verify.v2.services(TWILIO_VERIFY).verification_checks.create(to=phone, code=code)
-        return r.status == 'approved'
-    except Exception as e:
-        print(f"Erro verify: {e}"); return False
 
 def mp_sdk():
     return mercadopago.SDK(MP_ACCESS_TOKEN)
@@ -205,10 +190,6 @@ def email_exclusao_conta(to, nome, codigo):
     </div>"""
     return send_email(to, '⚠️ Confirmar exclusão de conta — Despesas Pessoais', html)
 
-def make_token(user_id, role='user'):
-    payload = {'sub': user_id, 'role': role, 'exp': datetime.utcnow() + timedelta(days=30)}
-    return jwt.encode(payload, SECRET_KEY, algorithm='HS256')
-
 def get_plano_status(user):
     if str(user.get('email','')) == ADM_EMAIL:
         return {'status': 'adm', 'pode_adicionar': True, 'limite': 9999, 'uso_mes': 0,
@@ -267,6 +248,14 @@ def require_auth(f):
             payload = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
             g.user_id = payload['sub']
             g.role    = payload.get('role', 'user')
+            # Validar sessão única: se o session_id do token não bate com o salvo no banco,
+            # significa que um login mais recente substituiu esta sessão
+            token_sid = payload.get('sid')
+            if token_sid:
+                sb = get_sb()
+                res = sb.table('users').select('session_id').eq('id', g.user_id).execute()
+                if res.data and res.data[0].get('session_id') and res.data[0]['session_id'] != token_sid:
+                    return jsonify({'error': 'sessao_encerrada', 'message': 'Sua sessão foi encerrada porque sua conta foi acessada em outro dispositivo.'}), 401
         except jwt.ExpiredSignatureError:
             return jsonify({'error': 'Sessão expirada'}), 401
         except Exception:
@@ -355,11 +344,12 @@ def verify_email():
         return jsonify({'error': 'Código incorreto'}), 400
     if user.get('verify_exp') and now > user['verify_exp']:
         return jsonify({'error': 'Código expirado. Solicite novo cadastro.'}), 400
-    sb.table('users').update({'verified': True, 'verify_code': None, 'verify_exp': None}).eq('id', user['id']).execute()
+    new_session_id = secrets.token_hex(16)
+    sb.table('users').update({'verified': True, 'verify_code': None, 'verify_exp': None, 'session_id': new_session_id}).eq('id', user['id']).execute()
     # Notificar ADM
     try: email_novo_usuario_adm(user['name'], user['email'])
     except: pass
-    return jsonify({'ok': True, 'token': make_token(user['id']), 'name': user['name']})
+    return jsonify({'ok': True, 'token': make_token(user['id'], session_id=new_session_id), 'name': user['name']})
 
 @app.route('/api/auth/login', methods=['POST'])
 def login():
@@ -380,7 +370,10 @@ def login():
         return jsonify({'error': 'Verifique seu email', 'unverified': True, 'email': email}), 403
     if not user.get('active', True):
         return jsonify({'error': 'Conta desativada'}), 403
-    return jsonify({'ok': True, 'token': make_token(user['id']), 'name': user['name']})
+    # Gerar novo session_id: invalida automaticamente qualquer sessão anterior
+    new_session_id = secrets.token_hex(16)
+    sb.table('users').update({'session_id': new_session_id}).eq('id', user['id']).execute()
+    return jsonify({'ok': True, 'token': make_token(user['id'], session_id=new_session_id), 'name': user['name']})
 
 @app.route('/api/auth/forgot', methods=['POST'])
 def forgot():
