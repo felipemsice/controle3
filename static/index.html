@@ -811,7 +811,27 @@ function showSuc(id,msg){const el=document.getElementById(id);el.textContent=msg
 
 async function api(path,opts={}){
   const headers={'Content-Type':'application/json',...(authToken?{Authorization:'Bearer '+authToken}:{})};
-  const r=await fetch(path,{...opts,headers});return r.json();
+  const r=await fetch(path,{...opts,headers});
+  if(r.status===401){
+    const d=await r.clone().json().catch(()=>({}));
+    if(d.error==='sessao_encerrada'){
+      handleSessaoEncerrada(d.message);
+      throw new Error('sessao_encerrada');
+    }
+  }
+  return r.json();
+}
+
+function handleSessaoEncerrada(msg){
+  authToken=null;userName=null;
+  localStorage.removeItem('token');localStorage.removeItem('uname');
+  document.querySelectorAll('.modal-overlay.open').forEach(m=>m.classList.remove('open'));
+  document.getElementById('app').style.display='none';
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-login').classList.add('active');
+  const err=document.getElementById('login-err');
+  err.textContent=msg||'Sua sessão foi encerrada porque sua conta foi acessada em outro dispositivo.';
+  err.classList.add('show');
 }
 
 async function loadContaStatus(){
