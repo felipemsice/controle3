@@ -59,7 +59,7 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
 
 /* APP */
 .app-wrap{display:none;max-width:480px;margin:0 auto;padding:0 0 6rem;width:100%}
-.hero{background:linear-gradient(160deg,#0d1117 0%,#0a1020 50%,#060d18 100%);border-bottom:1px solid var(--border);padding:env(safe-area-inset-top,16px) 20px 28px;position:relative;overflow:hidden}
+.hero{background:linear-gradient(160deg,#0d1117 0%,#0a1020 50%,#060d18 100%);border-bottom:1px solid var(--border);padding:env(safe-area-inset-top,16px) 20px 18px;position:relative;overflow:hidden}
 .hero::before{content:'π';position:absolute;right:-10px;top:-20px;font-size:140px;font-weight:700;color:rgba(0,212,255,.04);line-height:1;pointer-events:none;font-family:serif}
 .hero-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding-top:8px}
 .hero-top h1{font-size:15px;font-weight:600;color:var(--cyan);letter-spacing:.05em;text-transform:uppercase}
@@ -370,11 +370,13 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
         <button class="logout-btn" onclick="doLogout()"><i class="ti ti-logout" style="font-size:14px"></i></button>
       </div>
     </div>
-    <div class="hero-total-label">Total do mês</div>
-    <div class="hero-total" id="total-val">R$ 0,00</div>
-    <div class="hero-sub" id="hero-sub">Carregando...</div>
-    <div id="hero-trial" style="display:none;margin-top:12px">
-      <div id="hero-trial-inner"></div>
+    <div style="min-height:96px;display:flex;flex-direction:column;justify-content:center">
+      <div class="hero-total-label">Total do mês</div>
+      <div class="hero-total" id="total-val">R$ 0,00</div>
+      <div class="hero-sub" id="hero-sub">Carregando...</div>
+      <div id="hero-trial" style="display:none;margin-top:12px">
+        <div id="hero-trial-inner"></div>
+      </div>
     </div>
   </div>
   <div id="status-banner"></div>
