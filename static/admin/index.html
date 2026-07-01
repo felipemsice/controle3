@@ -113,12 +113,38 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
 
 <!-- LOGIN -->
 <div id="login-wrap" class="login-wrap">
-  <div class="login-card">
+  <div class="login-card" id="login-card-entrar">
     <div class="login-logo"><div class="nx-icon"><i class="ti ti-shield-lock"></i></div><h1>Painel ADM</h1><p>π NexaPI · Acesso restrito</p></div>
     <div class="err" id="login-err"></div>
     <div class="field"><label>E-mail</label><input type="email" id="adm-email" placeholder="admin@email.com" autocomplete="email"></div>
     <div class="field"><label>Senha</label><input type="password" id="adm-pw" placeholder="••••••" autocomplete="current-password"></div>
     <button class="btn" onclick="doAdmLogin()">Entrar</button>
+    <div style="text-align:center;margin-top:16px">
+      <a href="javascript:void(0)" onclick="showForgotCard()" style="font-size:13px;color:var(--cyan);text-decoration:none">Esqueci minha senha</a>
+    </div>
+  </div>
+
+  <!-- ESQUECI MINHA SENHA — PASSO 1 -->
+  <div class="login-card" id="login-card-forgot" style="display:none">
+    <div class="login-logo"><div class="nx-icon"><i class="ti ti-key"></i></div><h1>Recuperar senha</h1><p>Enviaremos um código para seu e-mail</p></div>
+    <div class="err" id="forgot-err"></div>
+    <div class="field"><label>E-mail</label><input type="email" id="forgot-email" placeholder="admin@email.com" autocomplete="email"></div>
+    <button class="btn" onclick="doAdmForgot()">Enviar código</button>
+    <div style="text-align:center;margin-top:16px">
+      <a href="javascript:void(0)" onclick="showLoginCard()" style="font-size:13px;color:var(--text-3);text-decoration:none"><i class="ti ti-chevron-left" style="font-size:12px"></i> Voltar ao login</a>
+    </div>
+  </div>
+
+  <!-- ESQUECI MINHA SENHA — PASSO 2 -->
+  <div class="login-card" id="login-card-reset" style="display:none">
+    <div class="login-logo"><div class="nx-icon"><i class="ti ti-lock-check"></i></div><h1>Nova senha</h1><p id="reset-sub">Digite o código recebido por e-mail</p></div>
+    <div class="err" id="reset-err"></div>
+    <div class="field"><label>Código (6 dígitos)</label><input type="text" id="reset-code" maxlength="6" inputmode="numeric" placeholder="000000"></div>
+    <div class="field"><label>Nova senha</label><input type="password" id="reset-pw" placeholder="Mínimo 6 caracteres" autocomplete="new-password"></div>
+    <button class="btn" onclick="doAdmReset()">Redefinir senha</button>
+    <div style="text-align:center;margin-top:16px">
+      <a href="javascript:void(0)" onclick="showLoginCard()" style="font-size:13px;color:var(--text-3);text-decoration:none"><i class="ti ti-chevron-left" style="font-size:12px"></i> Voltar ao login</a>
+    </div>
   </div>
 </div>
 
@@ -144,6 +170,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
   <div class="tabs-row">
     <button class="tab-btn active" id="tab-usuarios" onclick="switchTab('usuarios')"><i class="ti ti-users" style="font-size:14px"></i> Usuários</button>
     <button class="tab-btn" id="tab-cupons" onclick="switchTab('cupons')"><i class="ti ti-ticket" style="font-size:14px"></i> Cupons</button>
+    <button class="tab-btn" id="tab-admins" onclick="switchTab('admins')"><i class="ti ti-shield" style="font-size:14px"></i> Administradores</button>
   </div>
 
   <!-- ABA USUÁRIOS -->
@@ -217,6 +244,43 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
       <div id="cupons-list"><div class="empty"><i class="ti ti-ticket"></i>Nenhum cupom cadastrado ainda</div></div>
     </div>
   </div>
+
+  <!-- ABA ADMINISTRADORES -->
+  <div id="panel-admins" style="display:none">
+    <!-- CRIAR ADMIN -->
+    <div class="users-card" style="margin-bottom:16px">
+      <div class="users-head"><h2>Criar novo administrador</h2></div>
+      <div style="padding:18px 20px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+          <div>
+            <label style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px">Nome</label>
+            <input type="text" id="new-adm-name" placeholder="Nome completo" style="width:100%;height:42px;border:1px solid var(--border2);border-radius:8px;padding:0 12px;font-size:14px;background:var(--bg2);color:var(--text);font-family:inherit;-webkit-appearance:none">
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px">E-mail</label>
+            <input type="email" id="new-adm-email" placeholder="admin@email.com" style="width:100%;height:42px;border:1px solid var(--border2);border-radius:8px;padding:0 12px;font-size:14px;background:var(--bg2);color:var(--text);font-family:inherit;-webkit-appearance:none">
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr auto;gap:12px;align-items:end">
+          <div>
+            <label style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px">Senha temporária</label>
+            <input type="text" id="new-adm-pw" placeholder="Mínimo 6 caracteres" style="width:100%;height:42px;border:1px solid var(--border2);border-radius:8px;padding:0 12px;font-size:14px;background:var(--bg2);color:var(--text);font-family:inherit;-webkit-appearance:none">
+          </div>
+          <button onclick="criarAdmin()" style="height:42px;border-radius:8px;border:none;background:linear-gradient(135deg,var(--cyan),var(--cyan-dark));color:#000;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px;padding:0 18px;white-space:nowrap"><i class="ti ti-plus"></i> Criar admin</button>
+        </div>
+        <div id="admin-create-msg" style="font-size:13px;display:none;font-weight:500;margin-top:10px"></div>
+      </div>
+    </div>
+
+    <!-- LISTA DE ADMINS -->
+    <div class="users-card">
+      <div class="users-head">
+        <h2>Administradores cadastrados</h2>
+        <button class="refresh-btn" onclick="loadAdmins()"><i class="ti ti-refresh" style="font-size:14px"></i> Atualizar</button>
+      </div>
+      <div id="admins-list"><div class="empty"><i class="ti ti-shield"></i>Carregando...</div></div>
+    </div>
+  </div>
 </div>
 
 <!-- MODAL PLANO -->
@@ -257,7 +321,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
 
 <script>
 let admToken=sessionStorage.getItem('adm-token');
+let admMeId=sessionStorage.getItem('adm-id');
+let admIsPrimary=sessionStorage.getItem('adm-primary')==='1';
 let allUsers=[];
+let allAdmins=[];
 let modalUserId=null;
 let planoSelecionado=null;
 let toastTimer;
@@ -268,6 +335,51 @@ function showToast(msg,isError=false){
   clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.className='toast',3000);
 }
 function showErr(msg){const e=document.getElementById('login-err');e.textContent=msg;e.classList.add('show')}
+
+function showLoginCard(){
+  document.getElementById('login-card-entrar').style.display='block';
+  document.getElementById('login-card-forgot').style.display='none';
+  document.getElementById('login-card-reset').style.display='none';
+}
+function showForgotCard(){
+  document.getElementById('login-card-entrar').style.display='none';
+  document.getElementById('login-card-forgot').style.display='block';
+  document.getElementById('login-card-reset').style.display='none';
+  document.getElementById('forgot-err').classList.remove('show');
+}
+function showResetCard(email){
+  document.getElementById('login-card-entrar').style.display='none';
+  document.getElementById('login-card-forgot').style.display='none';
+  document.getElementById('login-card-reset').style.display='block';
+  document.getElementById('reset-sub').textContent='Código enviado para '+email;
+  document.getElementById('reset-err').classList.remove('show');
+  window._admResetEmail=email;
+}
+
+async function doAdmForgot(){
+  const email=document.getElementById('forgot-email').value.trim().toLowerCase();
+  const err=document.getElementById('forgot-err');
+  err.classList.remove('show');
+  if(!email){err.textContent='Digite seu email';err.classList.add('show');return}
+  try{
+    await api('/api/adm/forgot',{method:'POST',body:JSON.stringify({email})});
+    showResetCard(email);
+  }catch(e){err.textContent='Erro de conexão';err.classList.add('show')}
+}
+
+async function doAdmReset(){
+  const email=window._admResetEmail;
+  const code=document.getElementById('reset-code').value.trim();
+  const pw=document.getElementById('reset-pw').value;
+  const err=document.getElementById('reset-err');
+  err.classList.remove('show');
+  try{
+    const d=await api('/api/adm/reset',{method:'POST',body:JSON.stringify({email,code,password:pw})});
+    if(d.error){err.textContent=d.error;err.classList.add('show');return}
+    showToast('Senha redefinida! Faça login.');
+    showLoginCard();
+  }catch(e){err.textContent='Erro de conexão';err.classList.add('show')}
+}
 
 async function api(path,opts={}){
   const headers={'Content-Type':'application/json',...(admToken?{Authorization:'Bearer '+admToken}:{})};
@@ -281,12 +393,16 @@ async function doAdmLogin(){
     const d=await api('/api/adm/login',{method:'POST',body:JSON.stringify({email,password:pw})});
     if(d.error){showErr(d.error);return}
     admToken=d.token;sessionStorage.setItem('adm-token',admToken);
+    admMeId=String(d.id||'');
+    sessionStorage.setItem('adm-id',admMeId);
+    admIsPrimary=!!d.is_primary;
+    sessionStorage.setItem('adm-primary',admIsPrimary?'1':'0');
     document.getElementById('login-wrap').style.display='none';
     document.getElementById('adm-wrap').style.display='block';
     loadUsers();
   }catch(e){showErr('Erro de conexão')}
 }
-function doAdmLogout(){admToken=null;sessionStorage.removeItem('adm-token');location.reload()}
+function doAdmLogout(){admToken=null;sessionStorage.removeItem('adm-token');sessionStorage.removeItem('adm-id');sessionStorage.removeItem('adm-primary');location.reload()}
 
 async function loadUsers(){
   document.getElementById('users-list').innerHTML='<div class="empty"><i class="ti ti-loader"></i>Carregando...</div>';
@@ -444,14 +560,79 @@ async function deleteUser(id,name){
 }
 
 document.getElementById('adm-pw').addEventListener('keydown',e=>{if(e.key==='Enter')doAdmLogin()});
+document.getElementById('forgot-email').addEventListener('keydown',e=>{if(e.key==='Enter')doAdmForgot()});
+document.getElementById('reset-pw').addEventListener('keydown',e=>{if(e.key==='Enter')doAdmReset()});
 
 // ABAS
 function switchTab(tab){
   document.getElementById('panel-usuarios').style.display=tab==='usuarios'?'block':'none';
   document.getElementById('panel-cupons').style.display=tab==='cupons'?'block':'none';
+  document.getElementById('panel-admins').style.display=tab==='admins'?'block':'none';
   document.getElementById('tab-usuarios').classList.toggle('active',tab==='usuarios');
   document.getElementById('tab-cupons').classList.toggle('active',tab==='cupons');
+  document.getElementById('tab-admins').classList.toggle('active',tab==='admins');
   if(tab==='cupons')loadCupons();
+  if(tab==='admins')loadAdmins();
+}
+
+// ADMINISTRADORES
+async function loadAdmins(){
+  document.getElementById('admins-list').innerHTML='<div class="empty"><i class="ti ti-loader"></i>Carregando...</div>';
+  try{
+    allAdmins=await api('/api/adm/admins');
+    renderAdmins();
+  }catch(e){document.getElementById('admins-list').innerHTML='<div class="empty">Erro ao carregar</div>'}
+}
+
+function renderAdmins(){
+  if(!allAdmins.length){
+    document.getElementById('admins-list').innerHTML='<div class="empty"><i class="ti ti-shield-off"></i>Nenhum administrador encontrado</div>';return;
+  }
+  document.getElementById('admins-list').innerHTML=allAdmins.map(a=>{
+    const ini=(a.name||'?')[0].toUpperCase();
+    const criado=a.created_at?new Date(a.created_at).toLocaleDateString('pt-BR'):'—';
+    const isMe=String(a.id)===admMeId;
+    const podeExcluir=!a.is_primary&&!isMe;
+    const badge=a.is_primary
+      ?'<span class="pill pill-green"><i class="ti ti-crown" style="font-size:10px"></i> Principal</span>'
+      :'<span class="pill pill-gray">Administrador</span>';
+    return`<div class="user-row">
+      <div class="user-avatar">${ini}</div>
+      <div class="user-info">
+        <div class="user-name">${a.name}${isMe?' <span style="color:var(--text-3);font-weight:400;font-size:12px">(você)</span>':''}</div>
+        <div class="user-phone">${a.email}</div>
+        <div class="user-meta">${badge}<span>Criado em ${criado}</span></div>
+      </div>
+      <div class="user-actions">
+        ${podeExcluir?`<button class="icon-btn" onclick="deleteAdmin(${a.id},'${a.name.replace(/'/g,"\\'")}')" title="Remover"><i class="ti ti-trash"></i></button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function criarAdmin(){
+  const name=document.getElementById('new-adm-name').value.trim();
+  const email=document.getElementById('new-adm-email').value.trim().toLowerCase();
+  const pw=document.getElementById('new-adm-pw').value;
+  const msg=document.getElementById('admin-create-msg');
+  try{
+    const d=await api('/api/adm/admins',{method:'POST',body:JSON.stringify({name,email,password:pw})});
+    if(d.error){msg.style.display='block';msg.style.color='var(--red)';msg.textContent=d.error;return}
+    msg.style.display='block';msg.style.color='var(--cyan)';msg.textContent=`Administrador "${name}" criado! Um e-mail com a senha foi enviado.`;
+    document.getElementById('new-adm-name').value='';
+    document.getElementById('new-adm-email').value='';
+    document.getElementById('new-adm-pw').value='';
+    loadAdmins();
+  }catch(e){msg.style.display='block';msg.style.color='var(--red)';msg.textContent='Erro de conexão'}
+}
+
+async function deleteAdmin(id,name){
+  if(!confirm(`Remover o administrador "${name}"?`))return;
+  try{
+    const d=await api(`/api/adm/admins/${id}`,{method:'DELETE'});
+    if(d.error){showToast(d.error,true);return}
+    showToast('Administrador removido');loadAdmins();
+  }catch(e){showToast('Erro',true)}
 }
 
 // CUPONS
