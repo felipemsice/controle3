@@ -1,42 +1,70 @@
-import os, hashlib, base64, json, secrets, string
+import os, hashlib, hmac, base64, json, secrets, string, sys
 from datetime import datetime, timedelta
 from functools import wraps
 from flask import Flask, request, jsonify, send_from_directory, g, Response
 import jwt
+import bcrypt
 import mercadopago
 import requests as http_requests
 from supabase import create_client, Client as SupabaseClient
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 app = Flask(__name__, static_folder='static')
 
+# Rate limiter — protege endpoints sensíveis contra força bruta.
+# storage_uri padrão é in-memory (por processo). Para múltiplos workers
+# do Gunicorn, configure REDIS_URL para um limite compartilhado real.
+limiter = Limiter(
+    key_func=get_remote_address,
+    app=app,
+    storage_uri=os.environ.get('REDIS_URL', 'memory://'),
+    default_limits=[],
+)
+
 # ── CONFIG ───────────────────────────────────────────────
-SECRET_KEY      = os.environ.get('SECRET_KEY', 'dev-secret')
+SECRET_KEY      = os.environ.get('SECRET_KEY')
 ADM_EMAIL       = os.environ.get('ADM_EMAIL', 'felipep_s@yahoo.com.br')
 ADM_PASSWORD    = os.environ.get('ADM_PASSWORD', 'Admin@2025!')
 MP_ACCESS_TOKEN = os.environ.get('MP_ACCESS_TOKEN', '')
+# Chave secreta do webhook do Mercado Pago (Painel MP → Webhooks → "Assinatura secreta").
+# Usada para validar o header x-signature das notificações.
+MP_WEBHOOK_SECRET = os.environ.get('MP_WEBHOOK_SECRET', '')
 APP_URL         = os.environ.get('APP_URL', 'https://controle3.onrender.com')
 SUPABASE_URL    = os.environ.get('SUPABASE_URL', '')
 SUPABASE_KEY    = os.environ.get('SUPABASE_KEY', '')
 RESEND_API_KEY  = os.environ.get('RESEND_API_KEY', '')
 EMAIL_FROM      = os.environ.get('EMAIL_FROM', 'noreply@nexapi.com.br')
 
+# Aborta o boot se a SECRET_KEY não estiver configurada — sem ela, qualquer
+# um poderia forjar tokens JWT. Nunca cair em um valor default em produção.
+if not SECRET_KEY:
+    sys.stderr.write(
+        '\n[FATAL] SECRET_KEY não definida. Configure a variável de ambiente '
+        'SECRET_KEY (Render → Settings → Environment) antes de iniciar.\n\n'
+    )
+    sys.exit(1)
+
 PLANOS = {
     'basico': {
-        'nome': 'Básico', 'limite': 50, 'preco': 39.90,
+        'nome': 'Básico', 'limite': 999999, 'preco': 39.90, 'periodo': 'anual',
         'fotos': False, 'relatorios': False, 'categorias_custom': False,
-        'descricao': 'Até 50 lançamentos/mês'
+        'descricao': 'Lançamentos ilimitados — plano anual'
     },
     'standard': {
-        'nome': 'Standard', 'limite': 150, 'preco': 69.90,
+        'nome': 'Standard', 'limite': 999999, 'preco': 69.90, 'periodo': 'anual',
         'fotos': True, 'relatorios': True, 'categorias_custom': False,
-        'descricao': 'Até 150 lançamentos/mês'
+        'descricao': 'Ilimitado + fotos de comprovante e relatórios — plano anual'
     },
     'premium': {
-        'nome': 'Premium', 'limite': 999999, 'preco': 119.90,
+        'nome': 'Premium', 'limite': 999999, 'preco': 119.90, 'periodo': 'anual',
         'fotos': True, 'relatorios': True, 'categorias_custom': True,
-        'descricao': 'Lançamentos ilimitados'
+        'descricao': 'Tudo incluso + categorias personalizadas — plano anual'
     },
 }
+# Tolerância na comparação de valores (centavos) para evitar rejeição por
+# arredondamento de ponto flutuante ao validar o pagamento no webhook.
+PRECO_TOLERANCIA = 0.02
 
 # ── SUPABASE CLIENT ──────────────────────────────────────
 def get_sb() -> SupabaseClient:
@@ -44,7 +72,66 @@ def get_sb() -> SupabaseClient:
 
 # ── HELPERS ──────────────────────────────────────────────
 def hash_password(pw):
+    """Gera hash bcrypt (novo padrão). Usado em cadastros e trocas de senha."""
+    return bcrypt.hashpw(pw.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+def _hash_sha256_legacy(pw):
+    """Hash antigo (SHA-256 puro). Mantido apenas para reconhecer senhas
+    criadas antes da migração para bcrypt — nunca usar para novos hashes."""
     return hashlib.sha256(pw.encode()).hexdigest()
+
+def verify_password(pw, stored_hash):
+    """Confere a senha contra o hash salvo, aceitando os dois formatos.
+
+    Retorna (ok, novo_hash):
+      - ok=True/False conforme a senha bate.
+      - novo_hash: se a senha for válida MAS estiver no formato antigo
+        (SHA-256), devolve um hash bcrypt novo para o chamador regravar no
+        banco. Isso migra a base de forma transparente, sem pedir troca de
+        senha ao usuário. Em senhas já bcrypt, novo_hash é None.
+    """
+    if not stored_hash:
+        return False, None
+    # Hashes bcrypt começam com $2a$/$2b$/$2y$
+    if stored_hash.startswith('$2'):
+        try:
+            ok = bcrypt.checkpw(pw.encode('utf-8'), stored_hash.encode('utf-8'))
+        except Exception:
+            ok = False
+        return ok, None
+    # Caso contrário, trata como hash SHA-256 legado (comparação em tempo constante)
+    ok = hmac.compare_digest(stored_hash, _hash_sha256_legacy(pw))
+    return ok, (hash_password(pw) if ok else None)
+
+MAX_TENTATIVAS_CODIGO = 5
+
+def checar_codigo(sb, tabela, row, codigo):
+    """Valida um código de 6 dígitos (2FA/reset) contando tentativas erradas.
+
+    Após MAX_TENTATIVAS_CODIGO erros, o código é invalidado (zerado) e o usuário
+    precisa solicitar um novo — isso fecha a janela de força bruta mesmo que o
+    atacante rode várias tentativas dentro do limite de rate por IP.
+
+    Retorna (ok: bool, erro: str|None). 'tabela' é 'users' ou 'admins'.
+    """
+    now = datetime.utcnow().isoformat()
+    if not row.get('verify_code'):
+        return False, 'Código expirado ou inexistente. Solicite um novo.'
+    if row.get('verify_exp') and now > row['verify_exp']:
+        return False, 'Código expirado. Solicite um novo.'
+    if not hmac.compare_digest(str(row.get('verify_code')), str(codigo)):
+        tentativas = (row.get('verify_attempts') or 0) + 1
+        if tentativas >= MAX_TENTATIVAS_CODIGO:
+            sb.table(tabela).update({'verify_code': None, 'verify_exp': None,
+                                     'verify_attempts': 0}).eq('id', row['id']).execute()
+            return False, 'Muitas tentativas. O código foi invalidado — solicite um novo.'
+        sb.table(tabela).update({'verify_attempts': tentativas}).eq('id', row['id']).execute()
+        restantes = MAX_TENTATIVAS_CODIGO - tentativas
+        return False, f'Código incorreto. Tentativas restantes: {restantes}.'
+    # Acertou: zera o contador (o chamador limpa o código ao concluir a ação).
+    if row.get('verify_attempts'):
+        sb.table(tabela).update({'verify_attempts': 0}).eq('id', row['id']).execute()
+    return True, None
 
 def make_token(user_id, role='user', session_id=None):
     payload = {'sub': user_id, 'role': role, 'exp': datetime.utcnow() + timedelta(days=30)}
@@ -351,6 +438,7 @@ def privacidade_page():
     return send_from_directory('static/privacidade', 'index.html')
 
 @app.route('/api/auth/register', methods=['POST'])
+@limiter.limit("5 per minute; 20 per hour")
 def register():
     d     = request.get_json()
     name  = d.get('name','').strip()
@@ -370,7 +458,7 @@ def register():
             return jsonify({'error': 'Email já cadastrado'}), 409
         codigo = gerar_codigo()
         exp    = (datetime.utcnow() + timedelta(minutes=15)).isoformat()
-        sb.table('users').update({'verify_code': codigo, 'verify_exp': exp, 'name': name}).eq('id', user['id']).execute()
+        sb.table('users').update({'verify_code': codigo, 'verify_exp': exp, 'verify_attempts': 0, 'name': name}).eq('id', user['id']).execute()
         email_verificacao(email, name, codigo)
         return jsonify({'ok': True, 'message': 'Código reenviado'})
     trial_end = (datetime.utcnow() + timedelta(days=30)).isoformat()
@@ -386,6 +474,7 @@ def register():
     return jsonify({'ok': True, 'message': 'Código enviado por email'})
 
 @app.route('/api/auth/verify', methods=['POST'])
+@limiter.limit("8 per minute; 30 per hour")
 def verify_email():
     d      = request.get_json()
     email  = d.get('email','').strip().lower()
@@ -394,19 +483,18 @@ def verify_email():
     res    = sb.table('users').select('*').eq('email', email).execute()
     if not res.data: return jsonify({'error': 'Email não encontrado'}), 404
     user = res.data[0]
-    now  = datetime.utcnow().isoformat()
-    if user.get('verify_code') != codigo:
-        return jsonify({'error': 'Código incorreto'}), 400
-    if user.get('verify_exp') and now > user['verify_exp']:
-        return jsonify({'error': 'Código expirado. Solicite novo cadastro.'}), 400
+    ok, erro = checar_codigo(sb, 'users', user, codigo)
+    if not ok:
+        return jsonify({'error': erro}), 400
     new_session_id = secrets.token_hex(16)
-    sb.table('users').update({'verified': True, 'verify_code': None, 'verify_exp': None, 'session_id': new_session_id}).eq('id', user['id']).execute()
+    sb.table('users').update({'verified': True, 'verify_code': None, 'verify_exp': None, 'verify_attempts': 0, 'session_id': new_session_id}).eq('id', user['id']).execute()
     # Notificar ADM
     try: email_novo_usuario_adm(user['name'], user['email'])
     except: pass
     return jsonify({'ok': True, 'token': make_token(user['id'], session_id=new_session_id), 'name': user['name']})
 
 @app.route('/api/auth/login', methods=['POST'])
+@limiter.limit("10 per minute; 50 per hour")
 def login():
     d     = request.get_json()
     email = d.get('email','').strip().lower()
@@ -415,12 +503,17 @@ def login():
     res   = sb.table('users').select('*').eq('email', email).execute()
     if not res.data: return jsonify({'error': 'Email ou senha incorretos'}), 401
     user = res.data[0]
-    if user['password'] != hash_password(pw):
+    ok, novo_hash = verify_password(pw, user['password'])
+    if not ok:
         return jsonify({'error': 'Email ou senha incorretos'}), 401
+    # Migração transparente: se a senha estava em SHA-256, regrava em bcrypt.
+    if novo_hash:
+        try: sb.table('users').update({'password': novo_hash}).eq('id', user['id']).execute()
+        except Exception as e: print(f"Falha ao migrar hash: {e}")
     if not user.get('verified'):
         codigo = gerar_codigo()
         exp    = (datetime.utcnow() + timedelta(minutes=15)).isoformat()
-        sb.table('users').update({'verify_code': codigo, 'verify_exp': exp}).eq('id', user['id']).execute()
+        sb.table('users').update({'verify_code': codigo, 'verify_exp': exp, 'verify_attempts': 0}).eq('id', user['id']).execute()
         email_verificacao(email, user['name'], codigo)
         return jsonify({'error': 'Verifique seu email', 'unverified': True, 'email': email}), 403
     if not user.get('active', True):
@@ -431,6 +524,7 @@ def login():
     return jsonify({'ok': True, 'token': make_token(user['id'], session_id=new_session_id), 'name': user['name']})
 
 @app.route('/api/auth/forgot', methods=['POST'])
+@limiter.limit("5 per minute; 15 per hour")
 def forgot():
     d     = request.get_json()
     email = d.get('email','').strip().lower()
@@ -440,11 +534,12 @@ def forgot():
     user   = res.data[0]
     codigo = gerar_codigo()
     exp    = (datetime.utcnow() + timedelta(minutes=15)).isoformat()
-    sb.table('users').update({'verify_code': codigo, 'verify_exp': exp}).eq('id', user['id']).execute()
+    sb.table('users').update({'verify_code': codigo, 'verify_exp': exp, 'verify_attempts': 0}).eq('id', user['id']).execute()
     email_reset_senha(email, user['name'], codigo)
     return jsonify({'ok': True})
 
 @app.route('/api/auth/reset', methods=['POST'])
+@limiter.limit("8 per minute; 30 per hour")
 def reset_password():
     d      = request.get_json()
     email  = d.get('email','').strip().lower()
@@ -455,14 +550,12 @@ def reset_password():
     res = sb.table('users').select('*').eq('email', email).execute()
     if not res.data: return jsonify({'error': 'Email não encontrado'}), 404
     user = res.data[0]
-    now  = datetime.utcnow().isoformat()
-    if user.get('verify_code') != codigo:
-        return jsonify({'error': 'Código incorreto'}), 400
-    if user.get('verify_exp') and now > user['verify_exp']:
-        return jsonify({'error': 'Código expirado'}), 400
+    ok, erro = checar_codigo(sb, 'users', user, codigo)
+    if not ok:
+        return jsonify({'error': erro}), 400
     sb.table('users').update({
         'password': hash_password(new_pw),
-        'verify_code': None, 'verify_exp': None
+        'verify_code': None, 'verify_exp': None, 'verify_attempts': 0
     }).eq('id', user['id']).execute()
     return jsonify({'ok': True})
 
@@ -1172,6 +1265,103 @@ def get_photo(ref):
     return '', 404
 
 # ── PAGAMENTO ────────────────────────────────────────────
+def validar_assinatura_mp(req):
+    """Valida o header x-signature das notificações do Mercado Pago (HMAC-SHA256).
+
+    O MP monta o 'manifest' com o data.id (em minúsculas), o x-request-id e o
+    timestamp ts extraído do próprio x-signature, e assina com a chave secreta
+    do webhook. Se MP_WEBHOOK_SECRET não estiver configurada, retorna None
+    (indefinido) — o chamador decide se aceita ou bloqueia.
+    """
+    if not MP_WEBHOOK_SECRET:
+        return None
+    sig = req.headers.get('x-signature', '')
+    req_id = req.headers.get('x-request-id', '')
+    ts = None; v1 = None
+    for parte in sig.split(','):
+        if '=' in parte:
+            k, _, val = parte.strip().partition('=')
+            if k == 'ts': ts = val
+            elif k == 'v1': v1 = val
+    data_id = (req.args.get('data.id') or req.args.get('id') or '')
+    if not (ts and v1 and data_id):
+        return False
+    manifest = f"id:{data_id.lower()};request-id:{req_id};ts:{ts};"
+    esperado = hmac.new(MP_WEBHOOK_SECRET.encode(), manifest.encode(), hashlib.sha256).hexdigest()
+    return hmac.compare_digest(esperado, v1)
+
+def preco_esperado(sb, plano, cupom_code):
+    """Recalcula, no servidor, quanto o plano deveria custar considerando um
+    cupom válido. Nunca confia em valor vindo do cliente."""
+    base = PLANOS[plano]['preco']
+    cupom_code = (cupom_code or '').strip().upper()
+    if cupom_code:
+        cr = sb.table('cupons').select('*').eq('code', cupom_code).eq('ativo', True).execute()
+        if cr.data:
+            c = cr.data[0]
+            usos_ok = not c.get('usos_max') or c.get('usos_atual', 0) < c['usos_max']
+            planos_ok = not c.get('planos') or not c['planos'] or plano in c['planos']
+            if usos_ok and planos_ok:
+                pct = float(c.get('desconto', 0))
+                base = round(base * (1 - pct / 100), 2)
+    return max(1.00, base)
+
+def registrar_uso_cupom(sb, cupom_code):
+    cupom_code = (cupom_code or '').strip().upper()
+    if not cupom_code:
+        return
+    try:
+        row = sb.table('cupons').select('*').eq('code', cupom_code).execute()
+        if row.data:
+            c = row.data[0]
+            novos = c.get('usos_atual', 0) + 1
+            upd = {'usos_atual': novos}
+            if c.get('usos_max') and novos >= c['usos_max']:
+                upd['ativo'] = False
+            sb.table('cupons').update(upd).eq('code', cupom_code).execute()
+    except Exception as e:
+        print(f"Erro ao registrar cupom: {e}")
+
+def liberar_plano_se_pago(payment_id):
+    """ÚNICO ponto que concede plano pago. Consulta o pagamento na API do MP e
+    só libera se: status == 'approved', metadata com user_id/plano válidos, e o
+    valor efetivamente pago bate com o preço esperado (plano - cupom).
+    Idempotente: se o pagamento já foi processado, não duplica nem reconcede.
+    Retorna (ok: bool, motivo: str)."""
+    try:
+        pay = mp_sdk().payment().get(payment_id)['response']
+    except Exception as e:
+        return False, f'erro_consulta_mp: {e}'
+
+    status = pay.get('status')
+    if status != 'approved':
+        return False, f'status_{status}'
+
+    meta  = pay.get('metadata', {}) or {}
+    uid   = meta.get('user_id')
+    plano = meta.get('plano')
+    cupom = meta.get('cupom')
+    if not uid or plano not in PLANOS:
+        return False, 'metadata_invalida'
+
+    pago = float(pay.get('transaction_amount') or 0)
+    sb   = get_sb()
+    esperado = preco_esperado(sb, plano, cupom)
+    if pago + PRECO_TOLERANCIA < esperado:
+        return False, f'valor_insuficiente_pago_{pago}_esperado_{esperado}'
+
+    # Idempotência: se este mp_id já foi marcado como aprovado, não reprocessa.
+    ja = sb.table('pagamentos').select('id').eq('mp_id', str(payment_id)).eq('status', 'aprovado').execute()
+    if ja.data:
+        return True, 'ja_processado'
+
+    plano_end = (datetime.utcnow() + timedelta(days=365)).isoformat()
+    sb.table('users').update({'plano': plano, 'plano_end': plano_end, 'trial_end': None}).eq('id', uid).execute()
+    sb.table('pagamentos').insert({'user_id': uid, 'mp_id': str(payment_id),
+                                   'plano': plano, 'valor': pago, 'status': 'aprovado'}).execute()
+    registrar_uso_cupom(sb, cupom)
+    return True, 'aprovado'
+
 @app.route('/api/pagamento/criar', methods=['POST'])
 @require_auth
 def criar_pagamento():
@@ -1226,75 +1416,51 @@ def criar_pagamento():
 
 @app.route('/api/pagamento/webhook', methods=['POST'])
 def webhook():
+    # 1) Autenticidade: valida a assinatura HMAC do Mercado Pago.
+    #    None = secret não configurada (registra aviso mas segue, pois a
+    #    liberação ainda re-consulta o MP). False = assinatura inválida → 401.
+    assinatura = validar_assinatura_mp(request)
+    if assinatura is False:
+        print("Webhook rejeitado: assinatura x-signature inválida")
+        return '', 401
+    if assinatura is None:
+        print("AVISO: MP_WEBHOOK_SECRET não configurada — webhook sem validação de assinatura")
+
     data  = request.get_json(silent=True) or {}
-    topic = data.get('type') or request.args.get('topic','')
-    if topic in ('payment', 'merchant_order'):
-        payment_id = data.get('data',{}).get('id') or request.args.get('id')
+    topic = data.get('type') or request.args.get('topic', '') or request.args.get('type', '')
+    if topic == 'payment':
+        payment_id = (data.get('data', {}) or {}).get('id') or request.args.get('data.id') or request.args.get('id')
         if payment_id:
-            try:
-                pay    = mp_sdk().payment().get(payment_id)['response']
-                status = pay.get('status')
-                meta   = pay.get('metadata', {})
-                uid    = meta.get('user_id')
-                plano  = meta.get('plano')
-                if status == 'approved' and uid and plano:
-                    sb        = get_sb()
-                    plano_end = (datetime.utcnow() + timedelta(days=365)).isoformat()
-                    sb.table('users').update({'plano': plano, 'plano_end': plano_end, 'trial_end': None}).eq('id', uid).execute()
-                    sb.table('pagamentos').insert({'user_id': uid, 'mp_id': str(payment_id),
-                                                   'plano': plano, 'valor': pay.get('transaction_amount',0), 'status': 'aprovado'}).execute()
-                    # Registrar uso do cupom se houver
-                    cupom_code = (meta.get('cupom') or '').upper()
-                    if cupom_code:
-                        cupom_row = sb.table('cupons').select('*').eq('code', cupom_code).execute()
-                        if cupom_row.data:
-                            c = cupom_row.data[0]
-                            novos_usos = c.get('usos_atual', 0) + 1
-                            upd = {'usos_atual': novos_usos}
-                            if c.get('usos_max') and novos_usos >= c['usos_max']:
-                                upd['ativo'] = False
-                            sb.table('cupons').update(upd).eq('code', cupom_code).execute()
-            except Exception as e:
-                print(f"Webhook error: {e}")
+            ok, motivo = liberar_plano_se_pago(payment_id)
+            print(f"Webhook payment {payment_id}: ok={ok} motivo={motivo}")
+    # Sempre 200 para o MP não reenviar em loop (erros ficam no log).
     return '', 200
 
 @app.route('/api/pagamento/confirmar', methods=['POST'])
 @require_auth
 def confirmar_pagamento():
-    d          = request.get_json()
+    """Endpoint de RETORNO do checkout — apenas CONSULTA o estado do pagamento
+    e do plano do usuário. NÃO concede plano (isso é exclusivo do webhook, que
+    valida assinatura e valor). Existe para o front dar feedback imediato ao
+    usuário enquanto o webhook processa de forma assíncrona."""
+    d          = request.get_json() or {}
     payment_id = d.get('payment_id')
-    plano      = d.get('plano')
-    if not plano or plano not in PLANOS: return jsonify({'error': 'Plano inválido'}), 400
-    sb        = get_sb()
-    plano_end = (datetime.utcnow() + timedelta(days=365)).isoformat()
+    sb         = get_sb()
+
+    # Se veio payment_id, tenta liberar já (mesma validação estrita do webhook),
+    # cobrindo o caso em que o retorno chega antes da notificação assíncrona.
     if payment_id:
-        try:
-            pay    = mp_sdk().payment().get(payment_id)['response']
-            status = pay.get('status')
-            print(f"Payment {payment_id} status: {status}")
-            if status not in ('approved','pending','in_process'):
-                return jsonify({'ok': False, 'status': status})
-        except Exception as e:
-            print(f"MP error: {e}")
-    sb.table('users').update({'plano': plano, 'plano_end': plano_end, 'trial_end': None}).eq('id', g.user_id).execute()
-    try:
-        sb.table('pagamentos').insert({'user_id': g.user_id, 'mp_id': str(payment_id) if payment_id else None,
-                                       'plano': plano, 'valor': PLANOS[plano]['preco'], 'status': 'aprovado'}).execute()
-    except: pass
-    # Registrar uso do cupom se houver
-    cupom = d.get('cupom')
-    if cupom:
-        try:
-            row = sb.table('cupons').select('*').eq('code', cupom.upper()).execute()
-            if row.data:
-                c = row.data[0]
-                novos_usos = c.get('usos_atual', 0) + 1
-                update = {'usos_atual': novos_usos}
-                if c.get('usos_max') and novos_usos >= c['usos_max']:
-                    update['ativo'] = False
-                sb.table('cupons').update(update).eq('code', cupom.upper()).execute()
-        except: pass
-    return jsonify({'ok': True, 'plano': plano})
+        ok, motivo = liberar_plano_se_pago(payment_id)
+        print(f"Confirmar payment {payment_id}: ok={ok} motivo={motivo}")
+
+    # Reporta o plano atual do usuário (fonte da verdade = banco).
+    res  = sb.table('users').select('plano, plano_end').eq('id', g.user_id).execute()
+    user = res.data[0] if res.data else {}
+    plano_atual = user.get('plano')
+    if plano_atual:
+        return jsonify({'ok': True, 'plano': plano_atual, 'plano_end': user.get('plano_end')})
+    return jsonify({'ok': False, 'pendente': True,
+                    'message': 'Pagamento em processamento. Seu plano será ativado assim que confirmado.'})
 
 # ── ADM ──────────────────────────────────────────────────
 def bootstrap_admin_principal(sb):
@@ -1307,6 +1473,7 @@ def bootstrap_admin_principal(sb):
         }).execute()
 
 @app.route('/api/adm/login', methods=['POST'])
+@limiter.limit("10 per minute; 50 per hour")
 def adm_login():
     d     = request.get_json()
     email = d.get('email','').strip().lower()
@@ -1316,11 +1483,16 @@ def adm_login():
     res = sb.table('admins').select('*').eq('email', email).execute()
     if not res.data: return jsonify({'error': 'Credenciais incorretas'}), 401
     admin = res.data[0]
-    if admin['password'] != hash_password(pw):
+    ok, novo_hash = verify_password(pw, admin['password'])
+    if not ok:
         return jsonify({'error': 'Credenciais incorretas'}), 401
+    if novo_hash:
+        try: sb.table('admins').update({'password': novo_hash}).eq('id', admin['id']).execute()
+        except Exception as e: print(f"Falha ao migrar hash adm: {e}")
     return jsonify({'ok': True, 'token': make_token(admin['id'], role='adm'), 'id': admin['id'], 'name': admin['name'], 'is_primary': admin.get('is_primary', False)})
 
 @app.route('/api/adm/forgot', methods=['POST'])
+@limiter.limit("5 per minute; 15 per hour")
 def adm_forgot():
     email = request.get_json().get('email','').strip().lower()
     sb    = get_sb()
@@ -1330,11 +1502,12 @@ def adm_forgot():
     admin  = res.data[0]
     codigo = gerar_codigo()
     exp    = (datetime.utcnow() + timedelta(minutes=15)).isoformat()
-    sb.table('admins').update({'verify_code': codigo, 'verify_exp': exp}).eq('id', admin['id']).execute()
+    sb.table('admins').update({'verify_code': codigo, 'verify_exp': exp, 'verify_attempts': 0}).eq('id', admin['id']).execute()
     email_reset_senha_adm(email, admin['name'], codigo)
     return jsonify({'ok': True})
 
 @app.route('/api/adm/reset', methods=['POST'])
+@limiter.limit("8 per minute; 30 per hour")
 def adm_reset():
     d      = request.get_json()
     email  = d.get('email','').strip().lower()
@@ -1345,13 +1518,11 @@ def adm_reset():
     res = sb.table('admins').select('*').eq('email', email).execute()
     if not res.data: return jsonify({'error': 'Código incorreto'}), 400
     admin = res.data[0]
-    now   = datetime.utcnow().isoformat()
-    if admin.get('verify_code') != codigo:
-        return jsonify({'error': 'Código incorreto'}), 400
-    if admin.get('verify_exp') and now > admin['verify_exp']:
-        return jsonify({'error': 'Código expirado. Solicite novamente.'}), 400
+    ok, erro = checar_codigo(sb, 'admins', admin, codigo)
+    if not ok:
+        return jsonify({'error': erro}), 400
     sb.table('admins').update({
-        'password': hash_password(pw), 'verify_code': None, 'verify_exp': None
+        'password': hash_password(pw), 'verify_code': None, 'verify_exp': None, 'verify_attempts': 0
     }).eq('id', admin['id']).execute()
     return jsonify({'ok': True})
 
