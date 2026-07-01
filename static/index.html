@@ -548,9 +548,11 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
       </div>
     </div>
   </div>
-  <div class="stats">
-    <div class="stat"><div class="stat-label">Despesas</div><div class="stat-value" id="count-val">—</div></div>
-    <div class="stat"><div class="stat-label">Saldo do mês</div><div class="stat-value" id="saldo-val" style="font-size:18px">—</div></div>
+  <div class="stats" style="grid-template-columns:1fr 1fr">
+    <div class="stat"><div class="stat-label">Despesas</div><div class="stat-value" id="despesa-val" style="font-size:20px;color:var(--red)">—</div></div>
+    <div class="stat"><div class="stat-label">Receitas</div><div class="stat-value" id="receita-val" style="font-size:20px;color:#22c55e">—</div></div>
+    <div class="stat"><div class="stat-label">Saldo do mês</div><div class="stat-value" id="saldo-val" style="font-size:20px">—</div></div>
+    <div class="stat"><div class="stat-label">Qtd. lançamentos</div><div class="stat-value" id="count-val">—</div></div>
   </div>
 
   <!-- COMPARATIVO MÊS ANTERIOR -->
@@ -1267,6 +1269,8 @@ function render(){
   const saldo=totalRec-totalDesp;
 
   document.getElementById('total-val').textContent=fmtR(totalDesp);
+  document.getElementById('despesa-val').textContent=fmtR(totalDesp);
+  document.getElementById('receita-val').textContent=fmtR(totalRec);
   document.getElementById('count-val').textContent=desp.length;
   const sEl=document.getElementById('saldo-val');
   sEl.textContent=(saldo>=0?'+':'')+fmtR(saldo);
