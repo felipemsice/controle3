@@ -395,6 +395,11 @@ async function loadEntries(){
   try{
     allEntries=await api('/api/despesas');
     initYears();
+    // Iniciar filtro no mês corrente na primeira carga
+    const mSel=document.getElementById('f-month');
+    if(mSel.value===''){
+      mSel.value=new Date().getMonth()+1;
+    }
     applyFilters();
   }catch(e){showToast('Erro ao carregar',true)}
 }
