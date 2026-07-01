@@ -83,10 +83,21 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
 /* TRIAL PILL */
 .trial-pill{display:inline-flex;align-items:center;gap:6px;background:rgba(0,212,255,.1);border:1px solid var(--border);border-radius:999px;padding:6px 14px;font-size:12px;font-weight:500;color:var(--cyan)}
 .trial-pill.urgente{background:rgba(255,165,2,.12);border-color:rgba(255,165,2,.3);color:var(--amber)}
+.trial-pill.trial-alert{background:var(--red-light);border-color:rgba(255,71,87,.3);color:var(--red)}
+.trial-pill.trial-alert a{color:var(--red);font-weight:700}
 .trial-pill i{font-size:13px}
 .trial-pill-dias{font-weight:700}
 .trial-pill a{color:rgba(0,212,255,.8);text-decoration:underline;cursor:pointer;margin-left:6px;font-size:11px}
 .trial-pill.urgente a{color:var(--amber)}
+.plan-badge{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:var(--text-2)}
+.plan-badge i{font-size:14px;color:var(--text-3)}
+.plan-badge-sep{color:var(--text-3);opacity:.5;font-weight:400}
+.plan-badge-sub{color:var(--text-3);font-weight:500}
+.plan-badge.premium{color:var(--cyan);letter-spacing:.02em}
+.plan-badge.premium i{color:#ffd166}
+.plan-upgrade-link{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--cyan);text-decoration:none;margin-top:6px;font-weight:600;width:fit-content}
+.plan-upgrade-link:hover{text-decoration:underline}
+.plan-upgrade-link.renew{color:var(--amber)}
 .logout-btn{background:rgba(255,255,255,.06);border:1px solid var(--border2);color:var(--text-3);font-size:12px;padding:6px 10px;border-radius:8px;cursor:pointer}
 
 /* STATS */
@@ -928,10 +939,9 @@ function renderHeroTrial(){
   if(!el||!inner)return;
   if(s.status==='trial'){
     const dias=s.trial_dias||0;
-    const urgente=dias<=7;
     el.style.display='block';
-    inner.innerHTML=`<div class="trial-pill${urgente?' urgente':''}">
-      <i class="ti ${urgente?'ti-alert-triangle':'ti-clock'}"></i>
+    inner.innerHTML=`<div class="trial-pill trial-alert">
+      <i class="ti ti-alert-triangle"></i>
       <span>Trial: <span class="trial-pill-dias">${dias} dia${dias===1?'':'s'}</span> restante${dias===1?'':'s'}</span>
       <a href="/assinar">Assinar →</a>
     </div>`;
@@ -940,16 +950,24 @@ function renderHeroTrial(){
     const uso=s.uso_mes||0;const lim=s.limite;
     const ilimitado=lim>=999999;
     const urgente=dias<=30;
+    const isPremium=s.plano==='premium';
     const nomes={basico:'Básico',standard:'Standard',premium:'Premium'};
     el.style.display='block';
-    inner.innerHTML=`<div class="trial-pill${urgente?' urgente':''}">
-      <i class="ti ti-crown"></i>
-      <span>Plano ${nomes[s.plano]||s.plano} · ${ilimitado?'ilimitado':uso+'/'+lim+' lanç.'} · <strong>${dias} dia${dias===1?'':'s'}</strong></span>
-      ${urgente?`<a href="/assinar">Renovar →</a>`:''}
+    let html=`<div class="plan-badge${isPremium?' premium':''}">
+      <i class="ti ${isPremium?'ti-crown':'ti-circle-check'}"></i>
+      <span>Plano ${nomes[s.plano]||s.plano}</span>
+      <span class="plan-badge-sep">·</span>
+      <span class="plan-badge-sub">${ilimitado?'ilimitado':uso+'/'+lim+' lanç.'}</span>
     </div>`;
+    if(urgente){
+      html+=`<a href="/assinar" class="plan-upgrade-link renew"><i class="ti ti-refresh"></i> Renovar · ${dias} dia${dias===1?'':'s'} restante${dias===1?'':'s'}</a>`;
+    } else if(!isPremium){
+      html+=`<a href="/assinar" class="plan-upgrade-link"><i class="ti ti-arrow-up-circle"></i> Fazer upgrade para o Premium</a>`;
+    }
+    inner.innerHTML=html;
   } else if(s.status==='expirado'){
     el.style.display='block';
-    inner.innerHTML=`<div class="trial-pill urgente">
+    inner.innerHTML=`<div class="trial-pill trial-alert">
       <i class="ti ti-lock"></i>
       <span>Plano expirado — somente leitura</span>
       <a href="/assinar">Assinar →</a>
