@@ -298,6 +298,14 @@ def relatorios_page():
 def assinar_page():
     return send_from_directory('static/assinar', 'index.html')
 
+@app.route('/termos')
+def termos_page():
+    return send_from_directory('static/termos', 'index.html')
+
+@app.route('/privacidade')
+def privacidade_page():
+    return send_from_directory('static/privacidade', 'index.html')
+
 @app.route('/api/auth/register', methods=['POST'])
 def register():
     d     = request.get_json()
@@ -429,6 +437,7 @@ def get_perfil():
         'active': user.get('active', True),
         'verified': user.get('verified', False),
         'created': user.get('created_at'),
+        'termos_aceite_em': user.get('termos_aceite_em'),
         'status': ps
     })
 
@@ -514,6 +523,14 @@ def confirmar_exclusao():
     sb.table('pagamentos').delete().eq('user_id', g.user_id).execute()
     sb.table('users').delete().eq('id', g.user_id).execute()
     return jsonify({'ok': True})
+@app.route('/api/aceitar-termos', methods=['POST'])
+@require_auth
+def aceitar_termos():
+    sb  = get_sb()
+    now = datetime.utcnow().isoformat()
+    sb.table('users').update({'termos_aceite_em': now}).eq('id', g.user_id).execute()
+    return jsonify({'ok': True, 'termos_aceite_em': now})
+
 @app.route('/api/conta/status', methods=['GET'])
 @require_auth
 def conta_status():
@@ -522,6 +539,7 @@ def conta_status():
     if not res.data: return jsonify({'error': 'Usuário não encontrado'}), 404
     user = res.data[0]
     ps   = get_plano_status(user)
+    ps['termos_aceitos'] = bool(user.get('termos_aceite_em'))
     if ps['status'] == 'ativo':
         uso = count_mes_atual(g.user_id)
         ps['uso_mes'] = uso
