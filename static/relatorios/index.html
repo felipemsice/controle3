@@ -238,7 +238,9 @@ tr:hover td{background:var(--bg2)}
 
   <!-- RESUMO -->
   <div class="summary">
-    <div class="sum-card"><div class="sum-label">Total do período</div><div class="sum-value cyan" id="s-total">R$ 0,00</div><div class="sum-sub" id="s-period">—</div></div>
+    <div class="sum-card"><div class="sum-label">Despesas</div><div class="sum-value" id="s-total" style="color:var(--red)">R$ 0,00</div><div class="sum-sub" id="s-period">—</div></div>
+    <div class="sum-card"><div class="sum-label">Receitas</div><div class="sum-value" id="s-receitas" style="color:#22c55e">R$ 0,00</div><div class="sum-sub">&nbsp;</div></div>
+    <div class="sum-card"><div class="sum-label">Saldo</div><div class="sum-value cyan" id="s-saldo">R$ 0,00</div><div class="sum-sub">&nbsp;</div></div>
     <div class="sum-card"><div class="sum-label">Lançamentos</div><div class="sum-value" id="s-count">0</div><div class="sum-sub" id="s-avg-ticket">—</div></div>
     <div class="sum-card"><div class="sum-label">Média mensal</div><div class="sum-value" id="s-avg">R$ 0,00</div><div class="sum-sub" id="s-months">—</div></div>
   </div>
@@ -247,6 +249,12 @@ tr:hover td{background:var(--bg2)}
   <div class="section">
     <div class="section-head"><span class="section-title">Por categoria</span></div>
     <div class="chart-card" id="chart-cat"><div class="empty"><i class="ti ti-chart-bar"></i>Nenhum dado</div></div>
+  </div>
+
+  <!-- RECEITAS -->
+  <div class="section">
+    <div class="section-head"><span class="section-title">Receitas</span></div>
+    <div class="chart-card" id="chart-rec"><div class="empty"><i class="ti ti-cash"></i>Nenhum dado</div></div>
   </div>
 
   <!-- MENSAL -->
@@ -318,7 +326,7 @@ const CAT_META_BASE={
 };
 let CAT_META={...CAT_META_BASE};
 let authToken=localStorage.getItem('token');
-let allEntries=[],filtered=[],sortCol='date',sortDir=-1,page=1;
+let allEntries=[],filtered=[],allReceitas=[],filteredReceitas=[],sortCol='date',sortDir=-1,page=1;
 const PER_PAGE=15;
 
 function fmtR(v){return'R$ '+v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}
@@ -373,6 +381,10 @@ function initYears(){
     const d=parseDate(e.date);
     if(d.year)anosComDados.add(d.year);
   });
+  allReceitas.forEach(e=>{
+    const d=parseDate(e.date);
+    if(d.year)anosComDados.add(d.year);
+  });
 
   // Se não houver nenhum dado ainda, mostra ao menos o ano atual
   if(!anosComDados.size)anosComDados.add(anoAtual);
@@ -393,7 +405,9 @@ function initYears(){
 
 async function loadEntries(){
   try{
-    allEntries=await api('/api/despesas');
+    const [desp,rec]=await Promise.all([api('/api/despesas'),api('/api/receitas')]);
+    allEntries=desp;
+    allReceitas=(rec||[]).map(r=>({...r,cat:r.descricao||r.desc||'Receita'}));
     initYears();
     // Iniciar filtro no mês corrente na primeira carga
     const mSel=document.getElementById('f-month');
@@ -435,9 +449,17 @@ function applyFilters(){
     if(max>0&&e.val>max)return false;
     return true;
   });
+  filteredReceitas=allReceitas.filter(e=>{
+    const d=parseDate(e.date);
+    if(year&&d.year!=year)return false;
+    if(month&&d.month!=month)return false;
+    if(min>0&&e.val<min)return false;
+    if(max>0&&e.val>max)return false;
+    return true;
+  });
   renderActiveTags(year,month,cat,min,max);
   renderSummary(year,month,cat);
-  renderCatChart();renderMonthlyChart();renderTable();
+  renderCatChart();renderRecChart();renderMonthlyChart();renderTable();
 }
 
 function renderActiveTags(year,month,cat,min,max){
@@ -455,10 +477,16 @@ function clearTag(i){window._tagClears[i]()}
 
 function renderSummary(year,month,cat){
   const total=filtered.reduce((s,e)=>s+e.val,0);
+  const totalRec=filteredReceitas.reduce((s,e)=>s+e.val,0);
+  const saldo=totalRec-total;
   const count=filtered.length;
   const monthSet=new Set(filtered.map(e=>{const d=parseDate(e.date);return d.year+'-'+d.month}));
   const months=monthSet.size||1;
   document.getElementById('s-total').textContent=fmtR(total);
+  document.getElementById('s-receitas').textContent=fmtR(totalRec);
+  const sEl=document.getElementById('s-saldo');
+  sEl.textContent=(saldo>=0?'+':'')+fmtR(saldo);
+  sEl.style.color=saldo>=0?'#22c55e':'var(--red)';
   document.getElementById('s-count').textContent=count;
   document.getElementById('s-avg-ticket').textContent=count?'ticket médio '+fmtR(total/count):'sem lançamentos';
   document.getElementById('s-avg').textContent=fmtR(total/months);
@@ -486,6 +514,27 @@ function renderCatChart(){
         <div class="bar-cat" style="color:${m.color}">${cat}</div>
         <div class="bar-track"><div class="bar-fill" style="width:${w}%;background:${m.bar}"><span class="bar-pct">${pct}%</span></div></div>
         <div class="bar-val">${fmtR(val)}</div>
+        <button class="detail-toggle" id="${detailId}-btn"><i class="ti ti-plus"></i></button>
+      </div>
+      <div class="detail-panel" id="${detailId}"></div>
+    </div>`;
+  }).join('');
+}
+
+function renderRecChart(){
+  const cc=document.getElementById('chart-rec');
+  if(!filteredReceitas.length){cc.innerHTML='<div class="empty"><i class="ti ti-cash"></i>Nenhum dado</div>';return}
+  const totals={};filteredReceitas.forEach(e=>{totals[e.cat]=(totals[e.cat]||0)+e.val});
+  const sorted=Object.entries(totals).sort((a,b)=>b[1]-a[1]);
+  const grand=filteredReceitas.reduce((s,e)=>s+e.val,0);const mx=sorted[0][1];
+  cc.innerHTML=sorted.map(([desc,val],i)=>{
+    const pct=Math.round(val/grand*100);const w=Math.round(val/mx*100);
+    const detailId='rec-detail-'+i;
+    return`<div class="bar-row-wrap">
+      <div class="bar-row" style="cursor:pointer" onclick="toggleDetail('${detailId}','rec','${desc.replace(/'/g,"\\'")}')">
+        <div class="bar-cat" style="color:#22c55e">${desc}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${w}%;background:#22c55e"><span class="bar-pct">${pct}%</span></div></div>
+        <div class="bar-val" style="color:#22c55e">${fmtR(val)}</div>
         <button class="detail-toggle" id="${detailId}-btn"><i class="ti ti-plus"></i></button>
       </div>
       <div class="detail-panel" id="${detailId}"></div>
@@ -532,6 +581,8 @@ function toggleDetail(detailId,tipo,chave){
   let itens;
   if(tipo==='cat'){
     itens=filtered.filter(e=>e.cat===chave);
+  }else if(tipo==='rec'){
+    itens=filteredReceitas.filter(e=>e.cat===chave);
   }else{
     const[y,m]=chave.split('-');
     itens=filtered.filter(e=>{const d=parseDate(e.date);return d.year==y&&d.month==+m});
@@ -540,6 +591,23 @@ function toggleDetail(detailId,tipo,chave){
     const da=parseDate(a.date),db=parseDate(b.date);
     return(db.year*10000+db.month*100+db.day)-(da.year*10000+da.month*100+da.day);
   });
+
+  if(tipo==='rec'){
+    panel.innerHTML=itens.map(e=>{
+      const hasObs=!!(e.obs&&e.obs.trim());
+      return`<div class="detail-item">
+        <div class="detail-item-cat" style="background:rgba(34,197,94,.12);color:#22c55e">${e.cat}</div>
+        <div class="detail-item-info">
+          <div class="detail-item-date">${e.date} ${e.time||''}</div>
+          ${hasObs?`<div class="detail-item-obs">"${e.obs}"</div>`:''}
+        </div>
+        <div class="detail-item-val" style="color:#22c55e">${fmtR(e.val)}</div>
+      </div>`;
+    }).join('');
+    panel.classList.add('open');
+    btn.innerHTML='<i class="ti ti-minus"></i>';
+    return;
+  }
 
   panel.innerHTML=itens.map(e=>{
     const m=CAT_META[e.cat]||{bg:'#1a1a2e',color:'#00d4ff'};
