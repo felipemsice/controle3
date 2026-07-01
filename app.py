@@ -1278,14 +1278,24 @@ def adm_users():
 @require_adm
 def adm_delete_user(uid):
     sb = get_sb()
-    rows = sb.table('despesas').select('photo_path').eq('user_id', uid).execute()
-    paths = [r['photo_path'] for r in rows.data if r.get('photo_path')]
-    if paths:
-        try: sb.storage.from_('recibos').remove(paths)
-        except: pass
-    sb.table('despesas').delete().eq('user_id', uid).execute()
-    sb.table('categorias').delete().eq('user_id', uid).execute()
-    sb.table('users').delete().eq('id', uid).execute()
+    try:
+        rows = sb.table('despesas').select('photo_path').eq('user_id', uid).execute()
+        paths = [r['photo_path'] for r in rows.data if r.get('photo_path')]
+        if paths: sb.storage.from_('recibos').remove(paths)
+    except Exception as e:
+        print(f"Erro ao remover fotos (uid={uid}): {e}")
+    try:
+        sb.table('despesas').delete().eq('user_id', uid).execute()
+        sb.table('receitas').delete().eq('user_id', uid).execute()
+        sb.table('categorias').delete().eq('user_id', uid).execute()
+        sb.table('metas').delete().eq('user_id', uid).execute()
+        sb.table('recorrentes').delete().eq('user_id', uid).execute()
+        sb.table('parcelamentos').delete().eq('user_id', uid).execute()
+        sb.table('pagamentos').delete().eq('user_id', uid).execute()
+        sb.table('users').delete().eq('id', uid).execute()
+    except Exception as e:
+        print(f"Erro ao excluir usuário (uid={uid}): {e}")
+        return jsonify({'error': 'Falha ao excluir usuário. Verifique os logs.'}), 500
     return jsonify({'ok': True})
 
 @app.route('/api/adm/users/<uid>/toggle', methods=['POST'])
