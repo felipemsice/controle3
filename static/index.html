@@ -189,6 +189,7 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
 .modal-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
 .modal-btn{height:52px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-size:15px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-family:inherit}
 .modal-btn.primary{background:linear-gradient(135deg,var(--cyan),var(--cyan-dark));color:#000;border:none;font-weight:700}
+.modal-btn:disabled{opacity:.4;cursor:not-allowed}
 .modal-btn.danger{background:var(--red-light);color:var(--red);border-color:rgba(255,71,87,.3)}
 .modal-cancel{width:100%;height:48px;border-radius:var(--radius-sm);border:none;background:none;color:var(--text-3);font-size:15px;cursor:pointer;font-family:inherit}
 
@@ -399,6 +400,12 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
       <button class="modal-btn" onclick="showPerfilView('perfil-view-suporte')" style="width:100%;margin-bottom:8px;justify-content:flex-start;gap:12px;padding:0 16px">
         <i class="ti ti-headset" style="font-size:18px;color:var(--cyan);flex-shrink:0;width:20px;text-align:center"></i> Falar com suporte
       </button>
+      <a href="/termos" target="_blank" class="modal-btn" style="width:100%;margin-bottom:8px;justify-content:flex-start;gap:12px;padding:0 16px;text-decoration:none;box-sizing:border-box">
+        <i class="ti ti-file-text" style="font-size:18px;color:var(--cyan);flex-shrink:0;width:20px;text-align:center"></i> Termos de Uso
+      </a>
+      <a href="/privacidade" target="_blank" class="modal-btn" style="width:100%;margin-bottom:14px;justify-content:flex-start;gap:12px;padding:0 16px;text-decoration:none;box-sizing:border-box">
+        <i class="ti ti-shield-lock" style="font-size:18px;color:var(--cyan);flex-shrink:0;width:20px;text-align:center"></i> Política de Privacidade
+      </a>
       <button class="modal-btn" onclick="showPerfilView('perfil-view-excluir')" style="width:100%;margin-bottom:14px;justify-content:flex-start;gap:12px;padding:0 16px;border-color:rgba(255,71,87,.3);color:var(--red)">
         <i class="ti ti-trash" style="font-size:18px;color:var(--red);flex-shrink:0;width:20px;text-align:center"></i> Excluir minha conta
       </button>
@@ -489,6 +496,30 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
         <i class="ti ti-trash"></i> Excluir minha conta definitivamente
       </button>
     </div>
+  </div>
+</div>
+
+<!-- MODAL ACEITE DE TERMOS (OBRIGATÓRIO NO PRIMEIRO ACESSO) -->
+<div class="modal-overlay" id="termos-modal" style="z-index:200">
+  <div class="modal" style="max-width:420px">
+    <div style="text-align:center;margin-bottom:6px">
+      <i class="ti ti-shield-lock" style="font-size:36px;color:var(--cyan)"></i>
+    </div>
+    <div class="modal-title" style="text-align:center">Antes de começar</div>
+    <div style="font-size:13px;color:var(--text-2);line-height:1.5;text-align:center;margin-bottom:18px">
+      Para usar o Despesas Pessoais, leia e aceite os documentos abaixo.
+    </div>
+    <label style="display:flex;align-items:flex-start;gap:10px;background:var(--bg2);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:10px;cursor:pointer">
+      <input type="checkbox" id="chk-termos" onchange="checkTermosOk()" style="width:18px;height:18px;accent-color:var(--cyan);margin-top:1px;flex-shrink:0">
+      <span style="font-size:13.5px;color:var(--text-2);line-height:1.4">Li e aceito os <a href="/termos" target="_blank" style="color:var(--cyan);font-weight:600">Termos de Uso</a></span>
+    </label>
+    <label style="display:flex;align-items:flex-start;gap:10px;background:var(--bg2);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:18px;cursor:pointer">
+      <input type="checkbox" id="chk-privacidade" onchange="checkTermosOk()" style="width:18px;height:18px;accent-color:var(--cyan);margin-top:1px;flex-shrink:0">
+      <span style="font-size:13.5px;color:var(--text-2);line-height:1.4">Li e aceito a <a href="/privacidade" target="_blank" style="color:var(--cyan);font-weight:600">Política de Privacidade</a></span>
+    </label>
+    <button class="modal-btn primary" id="btn-continuar-termos" onclick="aceitarTermos()" style="width:100%" disabled>
+      <i class="ti ti-check"></i> Continuar
+    </button>
   </div>
 </div>
 
@@ -1110,8 +1141,9 @@ function showApp(){
   document.getElementById('hero-user').textContent='Olá, '+userName;
   document.getElementById('month-label').textContent=new Date().toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
   loadContaStatus().then(()=>{
-    // Exibir modal de trial apenas na primeira vez
-    if(contaStatus&&contaStatus.status==='trial'&&!localStorage.getItem('trial_modal_shown')){
+    if(contaStatus&&!contaStatus.termos_aceitos){
+      document.getElementById('termos-modal').classList.add('open');
+    }else if(contaStatus&&contaStatus.status==='trial'&&!localStorage.getItem('trial_modal_shown')){
       showTrialModal(contaStatus.trial_dias||30);
     }
     loadCategorias().then(()=>{
@@ -1128,6 +1160,23 @@ function showApp(){
 
 // Para testar: limpar o flag do modal
 // localStorage.removeItem('trial_modal_shown')
+
+function checkTermosOk(){
+  const ok=document.getElementById('chk-termos').checked&&document.getElementById('chk-privacidade').checked;
+  document.getElementById('btn-continuar-termos').disabled=!ok;
+}
+
+async function aceitarTermos(){
+  try{
+    await api('/api/aceitar-termos',{method:'POST'});
+    if(contaStatus)contaStatus.termos_aceitos=true;
+    document.getElementById('termos-modal').classList.remove('open');
+    // Exibir modal de trial (se aplicável) apenas após aceitar os termos
+    if(contaStatus&&contaStatus.status==='trial'&&!localStorage.getItem('trial_modal_shown')){
+      showTrialModal(contaStatus.trial_dias||30);
+    }
+  }catch(e){showToast('Erro ao registrar aceite. Tente novamente.',true)}
+}
 
 async function addEntry(cat,val){
   // Verificar plano antes de adicionar
