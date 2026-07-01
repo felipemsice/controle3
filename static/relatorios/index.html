@@ -237,12 +237,12 @@ tr:hover td{background:var(--bg2)}
   </div>
 
   <!-- RESUMO -->
-  <div class="summary">
-    <div class="sum-card"><div class="sum-label">Despesas</div><div class="sum-value" id="s-total" style="color:var(--red)">R$ 0,00</div><div class="sum-sub" id="s-period">—</div></div>
+  <div class="summary" style="grid-template-columns:1fr 1fr">
     <div class="sum-card"><div class="sum-label">Receitas</div><div class="sum-value" id="s-receitas" style="color:#22c55e">R$ 0,00</div><div class="sum-sub">&nbsp;</div></div>
-    <div class="sum-card"><div class="sum-label">Saldo</div><div class="sum-value cyan" id="s-saldo">R$ 0,00</div><div class="sum-sub">&nbsp;</div></div>
-    <div class="sum-card"><div class="sum-label">Lançamentos</div><div class="sum-value" id="s-count">0</div><div class="sum-sub" id="s-avg-ticket">—</div></div>
+    <div class="sum-card"><div class="sum-label">Despesas</div><div class="sum-value" id="s-total" style="color:var(--red)">R$ 0,00</div><div class="sum-sub" id="s-period">—</div></div>
     <div class="sum-card"><div class="sum-label">Média mensal</div><div class="sum-value" id="s-avg">R$ 0,00</div><div class="sum-sub" id="s-months">—</div></div>
+    <div class="sum-card"><div class="sum-label">Lançamentos</div><div class="sum-value" id="s-count">0</div><div class="sum-sub" id="s-avg-ticket">—</div></div>
+    <div class="sum-card" style="grid-column:1/-1;text-align:center"><div class="sum-label">Saldo</div><div class="sum-value cyan" id="s-saldo">R$ 0,00</div><div class="sum-sub">&nbsp;</div></div>
   </div>
 
   <!-- GRÁFICO -->
