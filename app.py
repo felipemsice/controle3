@@ -166,6 +166,50 @@ def email_troca_senha(to, nome, codigo):
     </div>"""
     return send_email(to, 'Confirmar troca de senha — Despesas Pessoais', html)
 
+def email_reset_senha_adm(to, nome, codigo):
+    html = f"""
+    <div style="font-family:sans-serif;max-width:480px;margin:0 auto;background:#0a0a0f;color:#f0f0f0;border-radius:12px;padding:32px;border:1px solid rgba(0,212,255,.2)">
+      <div style="text-align:center;margin-bottom:24px">
+        <div style="font-size:28px;font-weight:700;color:#00d4ff">π NexaPI</div>
+        <div style="font-size:13px;color:#606070;margin-top:4px">Painel ADM · Despesas Pessoais</div>
+      </div>
+      <h2 style="font-size:20px;font-weight:600;color:#fff;margin-bottom:8px">Redefinir senha do painel ADM</h2>
+      <p style="color:#a0a0b0;font-size:14px;line-height:1.6;margin-bottom:24px">
+        Olá {nome}, use o código abaixo para redefinir sua senha de acesso ao painel administrativo:
+      </p>
+      <div style="background:#14141e;border:1px solid rgba(255,165,2,.3);border-radius:10px;padding:20px;text-align:center;margin-bottom:24px">
+        <div style="font-size:36px;font-weight:700;color:#ffa502;letter-spacing:10px">{codigo}</div>
+        <div style="font-size:12px;color:#606070;margin-top:8px">Válido por 15 minutos</div>
+      </div>
+      <p style="color:#606070;font-size:12px;text-align:center">
+        Se não solicitou a redefinição, ignore este email.
+      </p>
+      <div style="border-top:1px solid rgba(255,255,255,.06);margin-top:24px;padding-top:16px;text-align:center">
+        <a href="https://www.nexapi.com.br" style="color:#00d4ff;font-size:12px;text-decoration:none">www.nexapi.com.br</a>
+      </div>
+    </div>"""
+    return send_email(to, 'Redefinir senha — Painel ADM', html)
+
+def email_novo_adm(to, nome, senha_temp):
+    html = f"""
+    <div style="font-family:sans-serif;max-width:480px;margin:0 auto;background:#0a0a0f;color:#f0f0f0;border-radius:12px;padding:32px;border:1px solid rgba(0,212,255,.2)">
+      <div style="text-align:center;margin-bottom:24px">
+        <div style="font-size:28px;font-weight:700;color:#00d4ff">π NexaPI</div>
+        <div style="font-size:13px;color:#606070;margin-top:4px">Painel ADM · Despesas Pessoais</div>
+      </div>
+      <h2 style="font-size:20px;font-weight:600;color:#fff;margin-bottom:8px">Acesso ao painel administrativo</h2>
+      <p style="color:#a0a0b0;font-size:14px;line-height:1.6;margin-bottom:24px">
+        Olá {nome}, uma conta de administrador foi criada para você em <strong>{to}</strong>. Use a senha abaixo para o primeiro acesso e altere-a em seguida:
+      </p>
+      <div style="background:#14141e;border:1px solid rgba(0,212,255,.3);border-radius:10px;padding:20px;text-align:center;margin-bottom:24px">
+        <div style="font-size:22px;font-weight:700;color:#00d4ff">{senha_temp}</div>
+      </div>
+      <p style="color:#606070;font-size:12px;text-align:center">
+        Acesse em <a href="https://despesas.nexapi.com.br/admin" style="color:#00d4ff">despesas.nexapi.com.br/admin</a>
+      </p>
+    </div>"""
+    return send_email(to, 'Acesso criado — Painel ADM', html)
+
 def email_exclusao_conta(to, nome, codigo):
     html = f"""
     <div style="font-family:sans-serif;max-width:480px;margin:0 auto;background:#0a0a0f;color:#f0f0f0;border-radius:12px;padding:32px;border:1px solid rgba(255,71,87,.3)">
@@ -1253,12 +1297,110 @@ def confirmar_pagamento():
     return jsonify({'ok': True, 'plano': plano})
 
 # ── ADM ──────────────────────────────────────────────────
+def bootstrap_admin_principal(sb):
+    """Garante que o admin principal (env ADM_EMAIL) sempre existe na tabela admins."""
+    existing = sb.table('admins').select('id').eq('email', ADM_EMAIL).execute()
+    if not existing.data:
+        sb.table('admins').insert({
+            'name': 'Administrador', 'email': ADM_EMAIL,
+            'password': hash_password(ADM_PASSWORD), 'is_primary': True
+        }).execute()
+
 @app.route('/api/adm/login', methods=['POST'])
 def adm_login():
-    d = request.get_json()
-    if d.get('email','').strip().lower() == ADM_EMAIL and d.get('password') == ADM_PASSWORD:
-        return jsonify({'ok': True, 'token': make_token('adm', role='adm')})
-    return jsonify({'error': 'Credenciais incorretas'}), 401
+    d     = request.get_json()
+    email = d.get('email','').strip().lower()
+    pw    = d.get('password','')
+    sb    = get_sb()
+    bootstrap_admin_principal(sb)
+    res = sb.table('admins').select('*').eq('email', email).execute()
+    if not res.data: return jsonify({'error': 'Credenciais incorretas'}), 401
+    admin = res.data[0]
+    if admin['password'] != hash_password(pw):
+        return jsonify({'error': 'Credenciais incorretas'}), 401
+    return jsonify({'ok': True, 'token': make_token(admin['id'], role='adm'), 'id': admin['id'], 'name': admin['name'], 'is_primary': admin.get('is_primary', False)})
+
+@app.route('/api/adm/forgot', methods=['POST'])
+def adm_forgot():
+    email = request.get_json().get('email','').strip().lower()
+    sb    = get_sb()
+    bootstrap_admin_principal(sb)
+    res = sb.table('admins').select('*').eq('email', email).execute()
+    if not res.data: return jsonify({'ok': True})  # não revela se o email existe
+    admin  = res.data[0]
+    codigo = gerar_codigo()
+    exp    = (datetime.utcnow() + timedelta(minutes=15)).isoformat()
+    sb.table('admins').update({'verify_code': codigo, 'verify_exp': exp}).eq('id', admin['id']).execute()
+    email_reset_senha_adm(email, admin['name'], codigo)
+    return jsonify({'ok': True})
+
+@app.route('/api/adm/reset', methods=['POST'])
+def adm_reset():
+    d      = request.get_json()
+    email  = d.get('email','').strip().lower()
+    codigo = d.get('code','').strip()
+    pw     = d.get('password','')
+    if len(pw) < 6: return jsonify({'error': 'Senha mínimo 6 caracteres'}), 400
+    sb  = get_sb()
+    res = sb.table('admins').select('*').eq('email', email).execute()
+    if not res.data: return jsonify({'error': 'Código incorreto'}), 400
+    admin = res.data[0]
+    now   = datetime.utcnow().isoformat()
+    if admin.get('verify_code') != codigo:
+        return jsonify({'error': 'Código incorreto'}), 400
+    if admin.get('verify_exp') and now > admin['verify_exp']:
+        return jsonify({'error': 'Código expirado. Solicite novamente.'}), 400
+    sb.table('admins').update({
+        'password': hash_password(pw), 'verify_code': None, 'verify_exp': None
+    }).eq('id', admin['id']).execute()
+    return jsonify({'ok': True})
+
+@app.route('/api/adm/admins', methods=['GET'])
+@require_adm
+def adm_list_admins():
+    sb  = get_sb()
+    bootstrap_admin_principal(sb)
+    res = sb.table('admins').select('id,name,email,is_primary,created_at').order('created_at').execute()
+    return jsonify(res.data)
+
+@app.route('/api/adm/admins', methods=['POST'])
+@require_adm
+def adm_create_admin():
+    d     = request.get_json()
+    name  = d.get('name','').strip()
+    email = d.get('email','').strip().lower()
+    pw    = d.get('password','')
+    if not name or not email or not pw:
+        return jsonify({'error': 'Preencha todos os campos'}), 400
+    if '@' not in email:
+        return jsonify({'error': 'Email inválido'}), 400
+    if len(pw) < 6:
+        return jsonify({'error': 'Senha mínimo 6 caracteres'}), 400
+    sb = get_sb()
+    existing = sb.table('admins').select('id').eq('email', email).execute()
+    if existing.data:
+        return jsonify({'error': 'Já existe um admin com esse email'}), 409
+    sb.table('admins').insert({
+        'name': name, 'email': email,
+        'password': hash_password(pw), 'is_primary': False
+    }).execute()
+    try: email_novo_adm(email, name, pw)
+    except: pass
+    return jsonify({'ok': True})
+
+@app.route('/api/adm/admins/<aid>', methods=['DELETE'])
+@require_adm
+def adm_delete_admin(aid):
+    sb  = get_sb()
+    res = sb.table('admins').select('*').eq('id', aid).execute()
+    if not res.data: return jsonify({'error': 'Admin não encontrado'}), 404
+    alvo = res.data[0]
+    if alvo.get('is_primary'):
+        return jsonify({'error': 'O administrador principal não pode ser removido'}), 403
+    if str(g.user_id) == str(aid):
+        return jsonify({'error': 'Você não pode remover a si mesmo'}), 403
+    sb.table('admins').delete().eq('id', aid).execute()
+    return jsonify({'ok': True})
 
 @app.route('/api/adm/users', methods=['GET'])
 @require_adm
