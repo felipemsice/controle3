@@ -262,7 +262,7 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
     <div class="err" id="login-err"></div>
     <div class="field"><label>E-mail</label><input type="email" id="login-email" placeholder="seu@email.com" autocomplete="email" inputmode="email"></div>
     <div class="field"><label>Senha</label><input type="password" id="login-pw" placeholder="••••••" autocomplete="current-password"></div>
-    <button class="btn btn-primary" onclick="doLogin()">Entrar</button>
+    <button class="btn btn-primary" id="btn-login" onclick="doLogin()">Entrar</button>
     <div class="divider">ou</div>
     <button class="btn-ghost" onclick="show('screen-register')">Criar conta grátis</button>
     <button class="btn-ghost" onclick="show('screen-forgot')">Esqueci minha senha</button>
@@ -1060,6 +1060,10 @@ async function doLogin(){
   hideErr('login-err');
   const email=document.getElementById('login-email').value.trim().toLowerCase();
   const pw=document.getElementById('login-pw').value;
+  const btn=document.getElementById('btn-login');
+  const original=btn.innerHTML;
+  btn.disabled=true;
+  btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin .7s linear infinite"></i> Verificando...';
   try{
     const d=await api('/api/auth/login',{method:'POST',body:JSON.stringify({email,password:pw})});
     if(d.error){
@@ -1075,6 +1079,7 @@ async function doLogin(){
     localStorage.setItem('token',authToken);localStorage.setItem('uname',userName);
     showApp();
   }catch(e){showErr('login-err','Erro de conexão')}
+  finally{btn.disabled=false;btn.innerHTML=original}
 }
 
 async function doRegister(){
