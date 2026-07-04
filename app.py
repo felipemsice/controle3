@@ -46,6 +46,22 @@ def get_sb() -> SupabaseClient:
 def hash_password(pw):
     return hashlib.sha256(pw.encode()).hexdigest()
 
+def verify_password(pw, stored_hash):
+    """Valida senha aceitando tanto o formato novo (SHA-256, 64 chars hex)
+    quanto o formato antigo (bcrypt, começa com $2). Retorna True/False."""
+    if not stored_hash:
+        return False
+    if stored_hash.startswith('$2'):
+        # Hash bcrypt legado
+        try:
+            import bcrypt
+            return bcrypt.checkpw(pw.encode(), stored_hash.encode())
+        except Exception as e:
+            print(f"Erro ao verificar bcrypt: {e}")
+            return False
+    # Hash SHA-256 padrão atual
+    return stored_hash == hash_password(pw)
+
 def make_token(user_id, role='user', session_id=None):
     payload = {'sub': user_id, 'role': role, 'exp': datetime.utcnow() + timedelta(days=30)}
     if session_id:
@@ -415,8 +431,14 @@ def login():
     res   = sb.table('users').select('*').eq('email', email).execute()
     if not res.data: return jsonify({'error': 'Email ou senha incorretos'}), 401
     user = res.data[0]
-    if user['password'] != hash_password(pw):
+    if not verify_password(pw, user['password']):
         return jsonify({'error': 'Email ou senha incorretos'}), 401
+    # Migração automática: se a senha ainda está em bcrypt (legado), re-hasheia em SHA-256
+    if user['password'].startswith('$2'):
+        try:
+            sb.table('users').update({'password': hash_password(pw)}).eq('id', user['id']).execute()
+        except Exception as e:
+            print(f"Erro ao migrar hash de senha (uid={user['id']}): {e}")
     if not user.get('verified'):
         codigo = gerar_codigo()
         exp    = (datetime.utcnow() + timedelta(minutes=15)).isoformat()
@@ -1319,7 +1341,7 @@ def adm_login():
     res = sb.table('admins').select('*').eq('email', email).execute()
     if not res.data: return jsonify({'error': 'Credenciais incorretas'}), 401
     admin = res.data[0]
-    if admin['password'] != hash_password(pw):
+    if not verify_password(pw, admin['password']):
         return jsonify({'error': 'Credenciais incorretas'}), 401
     return jsonify({'ok': True, 'token': make_token(admin['id'], role='adm'), 'id': admin['id'], 'name': admin['name'], 'is_primary': admin.get('is_primary', False)})
 
