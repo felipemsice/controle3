@@ -807,6 +807,10 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
       <label style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.08em">Valor (R$)</label>
       <input type="number" id="edit-val" min="0" step="0.01" inputmode="decimal" style="width:100%;height:48px;border:1px solid var(--border2);border-radius:var(--radius-sm);padding:0 14px;font-size:15px;background:var(--bg2);color:var(--text);font-family:inherit;-webkit-appearance:none;margin-top:6px">
     </div>
+    <div class="field" style="margin-bottom:12px">
+      <label style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.08em">Data</label>
+      <input type="date" id="edit-date" style="width:100%;height:48px;border:1px solid var(--border2);border-radius:var(--radius-sm);padding:0 14px;font-size:15px;background:var(--bg2);color:var(--text);font-family:inherit;-webkit-appearance:none;margin-top:6px;color-scheme:dark">
+    </div>
     <div class="field" style="margin-bottom:16px">
       <label style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.08em">Observação</label>
       <textarea id="edit-obs" maxlength="300" style="width:100%;height:70px;border:1px solid var(--border2);border-radius:var(--radius-sm);padding:10px 12px;font-size:14px;background:var(--bg2);color:var(--text);font-family:inherit;resize:none;margin-top:6px"></textarea>
@@ -2070,6 +2074,18 @@ function renderMetas(){
   }).join('');
 }
 
+// Converte "DD/MM/YY" (formato do app) -> "YYYY-MM-DD" (input date)
+function dateBrToIso(dateBr){
+  const[d,m,y]=dateBr.split('/');
+  const yyyy=y.length===2?'20'+y:y;
+  return `${yyyy}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
+}
+// Converte "YYYY-MM-DD" (input date) -> "DD/MM/YY" (formato do app)
+function dateIsoToBr(dateIso){
+  const[y,m,d]=dateIso.split('-');
+  return `${d}/${m}/${y.slice(2)}`;
+}
+
 // EDITAR LANÇAMENTO
 function openEditModal(eid){
   const e=entries.find(x=>x.id===eid);
@@ -2077,6 +2093,8 @@ function openEditModal(eid){
   document.getElementById('edit-id').value=eid;
   document.getElementById('edit-val').value=e.val;
   document.getElementById('edit-obs').value=e.obs||'';
+  try{document.getElementById('edit-date').value=dateBrToIso(e.date);}
+  catch(err){document.getElementById('edit-date').value='';}
   // Popular select
   const sel=document.getElementById('edit-cat');
   const CATS=['Combustível','Alimentação','Lazer','Saúde','Transporte','Moradia','Educação','Vestuário','Outros',...customCats.map(c=>c.nome)];
@@ -2091,12 +2109,19 @@ async function saveEdit(){
   const cat=document.getElementById('edit-cat').value;
   const val=parseFloat(document.getElementById('edit-val').value);
   const obs=document.getElementById('edit-obs').value.trim();
+  const dateIso=document.getElementById('edit-date').value;
   if(!cat||!val||val<=0){showToast('Preencha categoria e valor',true);return}
+  if(!dateIso){showToast('Selecione uma data',true);return}
+  const dateBr=dateIsoToBr(dateIso);
+  const e0=entries.find(x=>x.id===eid);
+  const[hh,mm]=(e0&&e0.time?e0.time:'12:00').split(':').map(Number);
+  const[y,m,d]=dateIso.split('-').map(Number);
+  const ts=new Date(y,m-1,d,hh||12,mm||0).getTime();
   try{
-    const d=await api('/api/despesas/'+eid,{method:'PUT',body:JSON.stringify({cat,val,obs})});
-    if(d.ok){
+    const d2=await api('/api/despesas/'+eid,{method:'PUT',body:JSON.stringify({cat,val,obs,date:dateBr,ts})});
+    if(d2.ok){
       const e=entries.find(x=>x.id===eid);
-      if(e){e.cat=cat;e.val=val;e.obs=obs||null;}
+      if(e){e.cat=cat;e.val=val;e.obs=obs||null;e.date=dateBr;e.ts=ts;}
       closeEditModal();render();renderMetas();showToast('Lançamento atualizado!');
     }
   }catch(e){showToast('Erro ao salvar',true)}
