@@ -163,7 +163,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
     <div class="stat-card"><div class="label">Total usuários</div><div class="value green" id="stat-total">—</div></div>
     <div class="stat-card"><div class="label">Modo grátis</div><div class="value amber" id="stat-gratis">—</div></div>
     <div class="stat-card"><div class="label">Plano pago</div><div class="value green" id="stat-pagos">—</div></div>
-    <div class="stat-card"><div class="label">Legados/trial</div><div class="value" id="stat-legado">—</div></div>
   </div>
 
   <!-- ABAS -->
@@ -180,15 +179,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
       <select id="filtro-status" onchange="filtrar()">
         <option value="">Todos os status</option>
         <option value="gratis">Modo grátis</option>
-        <option value="ativo">Plano ativo</option>
-        <option value="trial">Trial legado</option>
-      </select>
-      <select id="filtro-plano" onchange="filtrar()">
-        <option value="">Todos os planos</option>
-        <option value="completo">Completo</option>
-        <option value="basico">Básico (legado)</option>
-        <option value="standard">Standard (legado)</option>
-        <option value="premium">Premium (legado)</option>
+        <option value="ativo">Plano pago</option>
       </select>
     </div>
     <div class="users-card">
@@ -407,17 +398,14 @@ function updateStats(){
   document.getElementById('stat-total').textContent=allUsers.length;
   document.getElementById('stat-gratis').textContent=allUsers.filter(u=>u.plano_status==='gratis').length;
   document.getElementById('stat-pagos').textContent=allUsers.filter(u=>u.plano_status==='ativo').length;
-  document.getElementById('stat-legado').textContent=allUsers.filter(u=>u.plano_status==='trial').length;
 }
 
 function filtrar(){
   const busca=document.getElementById('busca').value.toLowerCase();
   const status=document.getElementById('filtro-status').value;
-  const plano=document.getElementById('filtro-plano').value;
   const filtered=allUsers.filter(u=>{
     if(busca&&!u.name.toLowerCase().includes(busca)&&!( u.email||"" ).includes(busca))return false;
     if(status&&u.plano_status!==status)return false;
-    if(plano&&u.plano!==plano)return false;
     return true;
   });
   document.getElementById('users-count').textContent=`Usuários (${filtered.length})`;
