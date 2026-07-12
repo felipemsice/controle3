@@ -937,12 +937,31 @@ function renderHeroTrial(){
   const el=document.getElementById('hero-trial');
   const inner=document.getElementById('hero-trial-inner');
   if(!el||!inner)return;
-  if(s.status==='trial'){
+  if(s.status==='gratis'){
+    const uso=s.uso_mes||0;const lim=s.limite||12;
+    const atingiu=uso>=lim;
+    el.style.display='block';
+    if(atingiu){
+      inner.innerHTML=`<div class="trial-pill trial-alert">
+        <i class="ti ti-alert-triangle"></i>
+        <span>Limite grátis atingido (${uso}/${lim})</span>
+        <a href="/assinar">Assinar →</a>
+      </div>`;
+    }else{
+      inner.innerHTML=`<div class="plan-badge">
+        <i class="ti ti-gift"></i>
+        <span>Plano grátis</span>
+        <span class="plan-badge-sep">·</span>
+        <span class="plan-badge-sub">${uso}/${lim} lançamentos este mês</span>
+      </div>
+      <a href="/assinar" class="plan-upgrade-link"><i class="ti ti-arrow-up-circle"></i> Assinar o plano Completo</a>`;
+    }
+  } else if(s.status==='trial'){
     const dias=s.trial_dias||0;
     el.style.display='block';
     inner.innerHTML=`<div class="trial-pill trial-alert">
       <i class="ti ti-alert-triangle"></i>
-      <span>Trial: <span class="trial-pill-dias">${dias} dia${dias===1?'':'s'}</span> restante${dias===1?'':'s'}</span>
+      <span>Teste: <span class="trial-pill-dias">${dias} dia${dias===1?'':'s'}</span> restante${dias===1?'':'s'}</span>
       <a href="/assinar">Assinar →</a>
     </div>`;
   } else if(s.status==='ativo'){
@@ -950,28 +969,18 @@ function renderHeroTrial(){
     const uso=s.uso_mes||0;const lim=s.limite;
     const ilimitado=lim>=999999;
     const urgente=dias<=30;
-    const isPremium=s.plano==='premium';
-    const nomes={basico:'Básico',standard:'Standard',premium:'Premium'};
+    const nomes={completo:'Completo',basico:'Básico',standard:'Standard',premium:'Premium'};
     el.style.display='block';
-    let html=`<div class="plan-badge${isPremium?' premium':''}">
-      <i class="ti ${isPremium?'ti-crown':'ti-circle-check'}"></i>
+    let html=`<div class="plan-badge premium">
+      <i class="ti ti-crown"></i>
       <span>Plano ${nomes[s.plano]||s.plano}</span>
       <span class="plan-badge-sep">·</span>
       <span class="plan-badge-sub">${ilimitado?'ilimitado':uso+'/'+lim+' lanç.'}</span>
     </div>`;
     if(urgente){
       html+=`<a href="/assinar" class="plan-upgrade-link renew"><i class="ti ti-refresh"></i> Renovar · ${dias} dia${dias===1?'':'s'} restante${dias===1?'':'s'}</a>`;
-    } else if(!isPremium){
-      html+=`<a href="/assinar" class="plan-upgrade-link"><i class="ti ti-arrow-up-circle"></i> Fazer upgrade para o Premium</a>`;
     }
     inner.innerHTML=html;
-  } else if(s.status==='expirado'){
-    el.style.display='block';
-    inner.innerHTML=`<div class="trial-pill trial-alert">
-      <i class="ti ti-lock"></i>
-      <span>Plano expirado — somente leitura</span>
-      <a href="/assinar">Assinar →</a>
-    </div>`;
   } else {
     el.style.display='none';
   }
@@ -981,14 +990,19 @@ function renderStatusBanner(){
   const b=document.getElementById('status-banner');
   if(!b||!contaStatus)return;
   const s=contaStatus;
-  if(s.status==='expirado'){
-    b.innerHTML=`<div class="status-banner expirado"><i class="ti ti-alert-circle"></i><span>Trial expirado — você pode ver seus lançamentos mas não adicionar novos</span><a href="/assinar" class="banner-btn">Assinar agora</a></div>`;
+  if(s.status==='gratis'){
+    const uso=s.uso_mes||0;const lim=s.limite||12;const pct=Math.round(uso/lim*100);
+    if(uso>=lim){
+      b.innerHTML=`<div class="status-banner expirado"><i class="ti ti-alert-circle"></i><span>Você usou seus ${lim} lançamentos grátis do mês</span><a href="/assinar" class="banner-btn">Assinar</a></div>`;
+    } else if(pct>=70){
+      b.innerHTML=`<div class="status-banner ativo-amber"><i class="ti ti-info-circle"></i><span>${uso}/${lim} lançamentos grátis este mês</span><a href="/assinar" class="banner-btn">Assinar</a></div>`;
+    } else {
+      b.innerHTML='';
+    }
   } else if(s.status==='ativo'){
     const uso=s.uso_mes||0;const lim=s.limite;const pct=Math.round(uso/lim*100);
-    if(pct>=90){
-      b.innerHTML=`<div class="status-banner ativo-red"><i class="ti ti-alert-triangle"></i><span>${uso}/${lim} lançamentos este mês — limite quase atingido!</span><a href="/assinar" class="banner-btn">Upgrade</a></div>`;
-    } else if(pct>=70){
-      b.innerHTML=`<div class="status-banner ativo-amber"><i class="ti ti-info-circle"></i><span>${uso}/${lim} lançamentos este mês</span><a href="/assinar" class="banner-btn">Upgrade</a></div>`;
+    if(lim<999999&&pct>=90){
+      b.innerHTML=`<div class="status-banner ativo-red"><i class="ti ti-alert-triangle"></i><span>${uso}/${lim} lançamentos este mês — limite quase atingido!</span></div>`;
     } else {
       b.innerHTML='';
     }
@@ -999,29 +1013,34 @@ function renderStatusBanner(){
 
 function showLimiteAlert(tipo, uso, limite){
   const s=contaStatus||{};
-  const planosNome={basico:'Básico',standard:'Standard',premium:'Premium',trial:'Trial'};
-  const nomePlano=s.status==='trial'?'Trial':(planosNome[s.plano]||s.plano||'atual');
+  const planosNome={completo:'Completo',basico:'Básico',standard:'Standard',premium:'Premium',trial:'Teste'};
+  const nomePlano=s.status==='trial'?'Teste':(planosNome[s.plano]||s.plano||'atual');
 
   if(tipo==='expirado'){
     document.getElementById('limite-icon').textContent='🔒';
     document.getElementById('limite-titulo').textContent='Período expirado';
-    document.getElementById('limite-msg').textContent='Seu período de acesso expirou. Assine um plano para continuar adicionando lançamentos.';
+    document.getElementById('limite-msg').textContent='Seu período de acesso expirou. Assine o plano Completo para continuar adicionando lançamentos.';
     document.getElementById('limite-sub').textContent='Seus lançamentos existentes continuam disponíveis para consulta.';
   } else {
     const usoAtual=uso!==undefined?uso:(s.uso_mes||0);
     const limiteAtual=limite!==undefined?limite:(s.limite||0);
     document.getElementById('limite-icon').textContent='📊';
     document.getElementById('limite-titulo').textContent='Limite do mês atingido';
-    if(s.status==='trial'){
+    if(s.status==='gratis'){
       document.getElementById('limite-msg').textContent=
-        `Você atingiu o limite de ${limiteAtual} lançamentos do período trial (${usoAtual}/${limiteAtual}).`;
+        `Você usou seus ${limiteAtual} lançamentos grátis deste mês (${usoAtual}/${limiteAtual}).`;
       document.getElementById('limite-sub').textContent=
-        'Assine um plano para continuar registrando suas despesas e ter acesso a todos os recursos.';
+        'Assine o plano Completo por R$ 99,90/ano e tenha lançamentos ilimitados.';
+    } else if(s.status==='trial'){
+      document.getElementById('limite-msg').textContent=
+        `Você atingiu o limite de ${limiteAtual} lançamentos do período de teste (${usoAtual}/${limiteAtual}).`;
+      document.getElementById('limite-sub').textContent=
+        'Assine o plano Completo para continuar registrando suas despesas.';
     } else {
       document.getElementById('limite-msg').textContent=
         `Você atingiu o limite de ${limiteAtual} lançamentos/mês do plano ${nomePlano} (${usoAtual}/${limiteAtual}).`;
       document.getElementById('limite-sub').textContent=
-        'Faça upgrade para um plano superior e continue registrando suas despesas.';
+        'Assine o plano Completo e tenha lançamentos ilimitados.';
     }
   }
   document.getElementById('limite-modal').classList.add('open');
@@ -1207,7 +1226,7 @@ async function addEntry(cat,val){
     if(!contaStatus.pode_adicionar){
       showLimiteAlert('expirado');return;
     }
-    if((contaStatus.status==='ativo'||contaStatus.status==='trial')&&contaStatus.uso_mes>=contaStatus.limite){
+    if((contaStatus.status==='ativo'||contaStatus.status==='trial'||contaStatus.status==='gratis')&&contaStatus.limite<999999&&contaStatus.uso_mes>=contaStatus.limite){
       showLimiteAlert('limite');return;
     }
   }
@@ -1844,11 +1863,15 @@ async function openPerfilModal(){
     document.getElementById('perfil-email').textContent=p.email||'—';
 
     const s=p.status||{};
-    const nomes={basico:'Básico',standard:'Standard',premium:'Premium'};
+    const nomes={completo:'Completo',basico:'Básico',standard:'Standard',premium:'Premium'};
     let badgeHtml='',detalheHtml='';
-    if(s.status==='trial'){
-      badgeHtml='<span style="background:rgba(255,165,2,.12);color:var(--amber);font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;border:1px solid rgba(255,165,2,.3)">TRIAL</span>';
-      detalheHtml=`Período de teste · <strong style="color:var(--amber)">${s.trial_dias} dias restantes</strong><br><a href="/assinar" style="color:var(--cyan);font-size:12px">Ver planos disponíveis →</a>`;
+    if(s.status==='gratis'){
+      const uso=s.uso_mes||0;const lim=s.limite||12;
+      badgeHtml='<span style="background:rgba(0,212,255,.08);color:var(--text-2);font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;border:1px solid var(--border2)">GRÁTIS</span>';
+      detalheHtml=`<strong style="color:var(--text)">${uso}/${lim}</strong> lançamentos grátis este mês<br><a href="/assinar" style="color:var(--cyan);font-size:12px">Assinar o plano Completo →</a>`;
+    }else if(s.status==='trial'){
+      badgeHtml='<span style="background:rgba(255,165,2,.12);color:var(--amber);font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;border:1px solid rgba(255,165,2,.3)">TESTE</span>';
+      detalheHtml=`Período de teste · <strong style="color:var(--amber)">${s.trial_dias} dias restantes</strong><br><a href="/assinar" style="color:var(--cyan);font-size:12px">Ver plano Completo →</a>`;
     }else if(s.status==='ativo'){
       const ilimitado=s.limite>=999999;
       badgeHtml=`<span style="background:rgba(0,212,255,.12);color:var(--cyan);font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;border:1px solid var(--border)">${(nomes[s.plano]||s.plano).toUpperCase()}</span>`;
