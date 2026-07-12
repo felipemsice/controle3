@@ -291,15 +291,8 @@ def get_plano_status(user):
             'categorias_custom': p.get('categorias_custom', False),
         }
 
-    # Trial legado: contas antigas ainda em período de teste mantêm o acesso
-    trial_end = dt_to_naive(user.get('trial_end'))
-    if trial_end and now < trial_end:
-        dias = (trial_end - now).days
-        return {'status': 'trial', 'pode_adicionar': True, 'limite': LIMITE_GRATIS,
-                'uso_mes': 0, 'trial_dias': dias,
-                'fotos': True, 'relatorios': True, 'categorias_custom': True}
-
-    # Modo gratuito (novo modelo): grátis até LIMITE_GRATIS lançamentos/mês
+    # Modo gratuito (novo modelo): grátis até LIMITE_GRATIS lançamentos/mês.
+    # Não há mais trial — qualquer conta sem plano pago ativo é 'gratis'.
     return {'status': 'gratis', 'pode_adicionar': True, 'limite': LIMITE_GRATIS, 'uso_mes': 0,
             'fotos': True, 'relatorios': True, 'categorias_custom': True}
 
