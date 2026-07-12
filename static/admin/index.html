@@ -451,9 +451,14 @@ function renderUsers(users){
       :'<span class="pill pill-red">Inativo</span>';
 
     const created=u.created||u.created_at?new Date(u.created||u.created_at).toLocaleDateString('pt-BR'):'—';
-    const planoEnd=u.plano_end?new Date(u.plano_end).toLocaleDateString('pt-BR'):'';
-    const trialEnd=u.trial_end?new Date(u.trial_end).toLocaleDateString('pt-BR'):'';
-    const vencimento=planoEnd?`vence ${planoEnd}`:trialEnd?`trial até ${trialEnd}`:'';
+    let vencimento='';
+    if(u.plano_end){
+      const fim=new Date(u.plano_end);
+      const diasRest=Math.max(0,Math.ceil((fim-new Date())/86400000));
+      vencimento=`vence ${fim.toLocaleDateString('pt-BR')} · ${diasRest} dia${diasRest===1?'':'s'} restante${diasRest===1?'':'s'}`;
+    }else if(u.trial_end){
+      vencimento=`trial até ${new Date(u.trial_end).toLocaleDateString('pt-BR')}`;
+    }
 
     return`<div class="user-row">
       <div class="user-avatar">${ini}</div>
