@@ -400,13 +400,12 @@ def register():
         sb.table('users').update({'verify_code': codigo, 'verify_exp': exp, 'name': name}).eq('id', user['id']).execute()
         email_verificacao(email, name, codigo)
         return jsonify({'ok': True, 'message': 'Código reenviado'})
-    trial_end = (datetime.utcnow() + timedelta(days=30)).isoformat()
     codigo    = gerar_codigo()
     exp       = (datetime.utcnow() + timedelta(minutes=15)).isoformat()
     res = sb.table('users').insert({
         'name': name, 'email': email,
         'password': hash_password(pw),
-        'trial_end': trial_end, 'verified': False, 'active': True,
+        'verified': False, 'active': True,
         'verify_code': codigo, 'verify_exp': exp
     }).execute()
     email_verificacao(email, name, codigo)
