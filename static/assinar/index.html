@@ -109,89 +109,49 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
         <a href="/" class="back-btn"><i class="ti ti-arrow-left" style="font-size:13px"></i> Voltar</a>
       </div>
       <i class="ti ti-crown hero-icon"></i>
-      <h1>Assine e continue</h1>
-      <p>Escolha o plano ideal para o seu volume de despesas mensais</p>
+      <h1>Assine o plano Completo</h1>
+      <p>Você usou seus 12 lançamentos gratuitos do mês. Continue sem limites.</p>
     </div>
 
     <div id="status-banner"></div>
 
     <div class="section">
-      <div class="section-title">Escolha seu plano anual</div>
+      <div class="section-title">Plano anual</div>
 
-      <!-- BÁSICO -->
-      <div class="plano-card" id="card-basico" onclick="selectPlano('basico')">
+      <!-- GRÁTIS (informativo) -->
+      <div class="plano-card" style="cursor:default;opacity:.8">
         <div class="plano-top">
           <div style="display:flex;align-items:center">
-            <div class="plano-radio"><div class="plano-radio-dot"></div></div>
-            <div class="plano-nome">Básico</div>
+            <div style="display:flex;flex-direction:column">
+              <div class="plano-nome">Grátis</div>
+              <div style="font-size:10px;color:var(--text-3);font-weight:700;letter-spacing:.05em;text-transform:uppercase;margin-top:2px">Plano atual</div>
+            </div>
           </div>
           <div class="plano-preco">
-            <div class="plano-valor">R$ 39,90</div>
-            <div class="plano-periodo">/ano</div>
-            <div class="plano-mensal">≈ R$ 3,32/mês</div>
+            <div class="plano-valor" style="color:var(--text-2)">R$ 0</div>
+            <div class="plano-periodo">/sempre</div>
           </div>
         </div>
         <ul class="plano-items">
-          <li><i class="ti ti-check"></i>Até 50 lançamentos por mês</li>
-          <li><i class="ti ti-check"></i>Entrada por voz</li>
-          <li class="locked" onclick="event.stopPropagation();showUpgradeInfo('fotos','standard')">
-            <i class="ti ti-camera" style="color:var(--text-3)"></i>
-            Fotos de comprovantes
-            <span class="lock-badge">Standard+</span>
-          </li>
-          <li class="locked" onclick="event.stopPropagation();showUpgradeInfo('relatorios','standard')">
-            <i class="ti ti-chart-bar" style="color:var(--text-3)"></i>
-            Relatórios e exportação Excel
-            <span class="lock-badge">Standard+</span>
-          </li>
-          <li class="locked" onclick="event.stopPropagation();showUpgradeInfo('categorias','premium')">
-            <i class="ti ti-tag" style="color:var(--text-3)"></i>
-            Categorias personalizadas
-            <span class="lock-badge">Premium</span>
-          </li>
+          <li><i class="ti ti-check"></i>Até 12 lançamentos por mês</li>
+          <li><i class="ti ti-check"></i>Todos os recursos do app</li>
         </ul>
       </div>
 
-      <!-- STANDARD -->
-      <div class="plano-card popular" id="card-standard" onclick="selectPlano('standard')">
-        <div class="plano-top">
-          <div style="display:flex;align-items:center">
-            <div class="plano-radio"><div class="plano-radio-dot"></div></div>
-            <div class="plano-nome">Standard</div>
-          </div>
-          <div class="plano-preco">
-            <div class="plano-valor">R$ 69,90</div>
-            <div class="plano-periodo">/ano</div>
-            <div class="plano-mensal">≈ R$ 5,82/mês</div>
-          </div>
-        </div>
-        <ul class="plano-items">
-          <li><i class="ti ti-check"></i>Até 150 lançamentos por mês</li>
-          <li><i class="ti ti-check"></i>Entrada por voz</li>
-          <li><i class="ti ti-check"></i><strong style="color:var(--cyan)">Fotos de comprovantes</strong></li>
-          <li><i class="ti ti-check"></i><strong style="color:var(--cyan)">Relatórios e exportação Excel</strong></li>
-          <li class="locked" onclick="event.stopPropagation();showUpgradeInfo('categorias','premium')">
-            <i class="ti ti-tag" style="color:var(--text-3)"></i>
-            Categorias personalizadas
-            <span class="lock-badge">Premium</span>
-          </li>
-        </ul>
-      </div>
-
-      <!-- PREMIUM -->
-      <div class="plano-card" id="card-premium" onclick="selectPlano('premium')">
+      <!-- COMPLETO -->
+      <div class="plano-card popular selected" id="card-completo" onclick="selectPlano('completo')">
         <div class="plano-top">
           <div style="display:flex;align-items:center">
             <div class="plano-radio"><div class="plano-radio-dot"></div></div>
             <div style="display:flex;flex-direction:column">
-              <div class="plano-nome">Premium</div>
+              <div class="plano-nome">Completo</div>
               <div style="font-size:10px;color:var(--cyan);font-weight:700;letter-spacing:.05em;text-transform:uppercase;margin-top:2px">Sem limites</div>
             </div>
           </div>
           <div class="plano-preco">
-            <div class="plano-valor">R$ 119,90</div>
+            <div class="plano-valor">R$ 99,90</div>
             <div class="plano-periodo">/ano</div>
-            <div class="plano-mensal">≈ R$ 9,99/mês</div>
+            <div class="plano-mensal">≈ R$ 8,33/mês</div>
           </div>
         </div>
         <ul class="plano-items">
@@ -199,8 +159,8 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
           <li><i class="ti ti-check"></i>Entrada por voz</li>
           <li><i class="ti ti-check"></i>Fotos de comprovantes</li>
           <li><i class="ti ti-check"></i>Relatórios completos e exportação Excel</li>
-          <li><i class="ti ti-check"></i><strong style="color:var(--cyan)">Categorias personalizadas</strong></li>
-          <li><i class="ti ti-check"></i><strong style="color:var(--cyan)">Suporte prioritário via WhatsApp</strong></li>
+          <li><i class="ti ti-check"></i>Categorias personalizadas</li>
+          <li><i class="ti ti-check"></i><strong style="color:var(--cyan)">Suporte via WhatsApp</strong></li>
         </ul>
       </div>
     </div>
@@ -211,7 +171,6 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
         <div class="pay-methods">
           <div class="pay-method"><i class="ti ti-qrcode"></i> Pix</div>
           <div class="pay-method"><i class="ti ti-credit-card"></i> Cartão</div>
-          <div class="pay-method"><i class="ti ti-file-invoice"></i> Boleto</div>
         </div>
         <button class="pay-btn" id="pay-btn" onclick="pagar()" disabled>
           <i class="ti ti-lock"></i> Assinar agora
@@ -257,7 +216,7 @@ html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF 
 
 <script>
 const authToken=localStorage.getItem('token');
-let planoSelecionado='standard';
+let planoSelecionado='completo';
 
 let toastTimer;
 function showToast(msg,isError=false){
@@ -268,16 +227,8 @@ function showToast(msg,isError=false){
 
 function selectPlano(p){
   planoSelecionado=p;
-  ['basico','standard','premium'].forEach(x=>{document.getElementById('card-'+x).classList.toggle('selected',x===p)});
+  document.getElementById('card-completo').classList.add('selected');
   document.getElementById('pay-btn').disabled=false;
-  // Se cupom ativo não é válido para este plano, limpar
-  if(cupomAtivo&&cupomAtivo.planos&&cupomAtivo.planos.length&&!cupomAtivo.planos.includes(p)){
-    cupomAtivo=null;
-    const msg=document.getElementById('cupom-msg');
-    msg.style.display='block';msg.style.color='var(--amber)';
-    msg.textContent='Cupom não válido para este plano. Digite outro código.';
-    document.getElementById('cupom-input').value='';
-  }
   updatePayBtn();
 }
 
@@ -287,14 +238,15 @@ async function loadStatus(){
     const r=await fetch('/api/conta/status',{headers:{Authorization:'Bearer '+authToken}});
     const d=await r.json();
     const b=document.getElementById('status-banner');
-    if(d.status==='trial'){
-      b.innerHTML=`<div class="banner trial"><i class="ti ti-clock"></i><span>Trial ativo - <strong>${d.trial_dias} dias restantes</strong>. Assine antes de expirar!</span></div>`;
-    }else if(d.status==='expirado'){
-      b.innerHTML=`<div class="banner expirado"><i class="ti ti-alert-circle"></i><span>Trial expirado - assine para continuar.</span></div>`;
+    if(d.status==='gratis'){
+      const uso=d.uso_mes||0;const lim=d.limite||12;
+      b.innerHTML=`<div class="banner trial"><i class="ti ti-info-circle"></i><span>Plano grátis — <strong>${uso}/${lim} lançamentos</strong> usados este mês.</span></div>`;
+    }else if(d.status==='trial'){
+      b.innerHTML=`<div class="banner trial"><i class="ti ti-clock"></i><span>Período de teste ativo — <strong>${d.trial_dias} dias restantes</strong>.</span></div>`;
     }else if(d.status==='ativo'){
-      const planos={basico:'Básico',standard:'Standard',premium:'Premium'};
+      const nomes={completo:'Completo',basico:'Básico',standard:'Standard',premium:'Premium'};
       const end=new Date(d.plano_end).toLocaleDateString('pt-BR');
-      b.innerHTML=`<div class="banner ativo"><i class="ti ti-circle-check"></i><span>Plano <strong>${planos[d.plano]}</strong> ativo até ${end}.</span></div>`;
+      b.innerHTML=`<div class="banner ativo"><i class="ti ti-circle-check"></i><span>Plano <strong>${nomes[d.plano]||d.plano}</strong> ativo até ${end}.</span></div>`;
     }
   }catch(e){}
 }
@@ -389,12 +341,11 @@ async function aplicarCupom(){
   }catch(e){msg.style.display='block';msg.style.color='var(--red)';msg.textContent='Erro ao validar cupom';}
 }
 
-const PRECOS_BASE={basico:39.90,standard:69.90,premium:119.90};
+const PRECOS_BASE={completo:99.90};
 
 function calcPreco(plano){
   let preco=PRECOS_BASE[plano]||0;
   if(cupomAtivo){
-    // Verificar se cupom é válido para este plano
     if(!cupomAtivo.planos||!cupomAtivo.planos.length||cupomAtivo.planos.includes(plano)){
       preco=Math.max(1, preco*(1-cupomAtivo.desconto/100));
     }
@@ -412,23 +363,20 @@ function updatePayBtn(){
   }else{
     btn.innerHTML=`<i class="ti ti-lock"></i> Assinar agora`;
   }
-  // Atualizar preços nos cards
-  ['basico','standard','premium'].forEach(p=>{
-    const el=document.querySelector(`#card-${p} .plano-valor`);
-    if(!el)return;
-    const pc=calcPreco(p);
-    const pb=PRECOS_BASE[p];
+  // Atualizar preço no card
+  const el=document.querySelector('#card-completo .plano-valor');
+  if(el){
+    const pc=calcPreco('completo');const pb=PRECOS_BASE['completo'];
     if(cupomAtivo&&pc<pb){
       el.innerHTML=`<s style="font-size:14px;opacity:.5;font-weight:400">R$ ${pb.toFixed(2).replace('.',',')}</s><br>R$ ${pc.toFixed(2).replace('.',',')}`;
-      el.style.color='var(--cyan)';
     }else{
       el.innerHTML=`R$ ${pb.toFixed(2).replace('.',',')}`;
-      el.style.color='var(--cyan)';
     }
-  });
+    el.style.color='var(--cyan)';
+  }
 }
 
-selectPlano('standard');
+selectPlano('completo');
 loadStatus();
 verificarRetorno();
 </script>
