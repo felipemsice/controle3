@@ -1371,12 +1371,14 @@ function popularSelectMeses(){
 function mudarMesVisao(val){
   const [a,m]=val.split('-').map(Number);
   anoVisao=a;mesVisao=m;
-  render();renderMetas();
+  // Feedback visual de carregamento
+  const lc=document.getElementById('list-container');
+  if(lc)lc.innerHTML='<div class="entries-card"><div class="empty"><i class="ti ti-loader-2" style="animation:spin .7s linear infinite"></i>Carregando '+MESES_NOMES[m]+'...</div></div>';
+  setTimeout(()=>{render();renderMetas();},120);
 }
 
 function render(){
   const mes=mesVisao;const ano=anoVisao;
-  const busca='';
   popularSelectMeses();
 
   // Despesas do mês
@@ -1403,22 +1405,21 @@ function render(){
   sEl.style.color=saldo>=0?'#22c55e':'var(--red)';
   document.getElementById('hero-sub').textContent=desp.length?desp.length+' lançamento'+(desp.length>1?'s':'')+' em '+MESES_NOMES[mes]:'Nenhum lançamento neste mês';
 
-  // Lista unificada com busca
+  // Lista unificada — filtrada pelo mês/ano em visualização
+  const noMes=e=>{
+    const d=e.date?e.date.split('/'):[0,0,0];
+    return parseInt(d[1])-1===mes&&parseInt('20'+d[2])===ano;
+  };
   const todosList=[
-    ...entries.map(e=>({...e,_tipo:'despesa'})),
-    ...receitas.map(r=>({...r,_tipo:'receita',cat:r.descricao||r.desc||'Receita'}))
-  ].filter(e=>{
-    if(!busca)return true;
-    return (e.cat||'').toLowerCase().includes(busca)||
-           (e.obs||'').toLowerCase().includes(busca)||
-           String(e.val).includes(busca);
-  }).sort((a,b)=>(b.ts||0)-(a.ts||0));
+    ...entries.filter(noMes).map(e=>({...e,_tipo:'despesa'})),
+    ...receitas.filter(noMes).map(r=>({...r,_tipo:'receita',cat:r.descricao||r.desc||'Receita'}))
+  ].sort((a,b)=>(b.ts||0)-(a.ts||0));
 
-  document.getElementById('list-title').textContent=busca?`Resultados (${todosList.length})`:'Lançamentos';
+  document.getElementById('list-title').textContent='Lançamentos';
 
   const lc=document.getElementById('list-container');
   if(!todosList.length){
-    lc.innerHTML='<div class="entries-card"><div class="empty"><i class="ti ti-receipt-off"></i>'+(busca?'Nenhum resultado':'Nenhum lançamento ainda')+'</div></div>';
+    lc.innerHTML='<div class="entries-card"><div class="empty"><i class="ti ti-receipt-off"></i>Nenhum lançamento em '+MESES_NOMES[mes]+' de '+ano+'</div></div>';
   }else{
     lc.innerHTML='<div class="entries-card">'+todosList.map(e=>{
       const isRec=e._tipo==='receita';
