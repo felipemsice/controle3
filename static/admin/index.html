@@ -161,9 +161,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
   <!-- STATS -->
   <div class="stats-row">
     <div class="stat-card"><div class="label">Total usuários</div><div class="value green" id="stat-total">—</div></div>
-    <div class="stat-card"><div class="label">Trial ativo</div><div class="value amber" id="stat-trial">—</div></div>
+    <div class="stat-card"><div class="label">Modo grátis</div><div class="value amber" id="stat-gratis">—</div></div>
     <div class="stat-card"><div class="label">Plano pago</div><div class="value green" id="stat-pagos">—</div></div>
-    <div class="stat-card"><div class="label">Expirados</div><div class="value" id="stat-exp">—</div></div>
+    <div class="stat-card"><div class="label">Legados/trial</div><div class="value" id="stat-legado">—</div></div>
   </div>
 
   <!-- ABAS -->
@@ -179,15 +179,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
       <input type="text" id="busca" placeholder="Buscar por nome ou email..." oninput="filtrar()">
       <select id="filtro-status" onchange="filtrar()">
         <option value="">Todos os status</option>
-        <option value="trial">Trial</option>
+        <option value="gratis">Modo grátis</option>
         <option value="ativo">Plano ativo</option>
-        <option value="expirado">Expirado</option>
+        <option value="trial">Trial legado</option>
       </select>
       <select id="filtro-plano" onchange="filtrar()">
         <option value="">Todos os planos</option>
-        <option value="basico">Básico</option>
-        <option value="standard">Standard</option>
-        <option value="premium">Premium</option>
+        <option value="completo">Completo</option>
+        <option value="basico">Básico (legado)</option>
+        <option value="standard">Standard (legado)</option>
+        <option value="premium">Premium (legado)</option>
       </select>
     </div>
     <div class="users-card">
@@ -216,11 +217,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
           </div>
         </div>
         <div style="margin-bottom:14px">
-          <label style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:8px">Planos válidos</label>
+          <label style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:8px">Aplicável ao plano</label>
           <div style="display:flex;gap:14px;flex-wrap:wrap">
-            <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-2);cursor:pointer"><input type="checkbox" id="plano-basico" value="basico" style="width:16px;height:16px;accent-color:var(--cyan)"> Básico</label>
-            <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-2);cursor:pointer"><input type="checkbox" id="plano-standard" value="standard" checked style="width:16px;height:16px;accent-color:var(--cyan)"> Standard</label>
-            <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-2);cursor:pointer"><input type="checkbox" id="plano-premium" value="premium" style="width:16px;height:16px;accent-color:var(--cyan)"> Premium</label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-2);cursor:pointer"><input type="checkbox" id="plano-completo" value="completo" checked style="width:16px;height:16px;accent-color:var(--cyan)"> Completo</label>
             <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--cyan);cursor:pointer;font-weight:600"><input type="checkbox" id="plano-todos" checked onchange="toggleTodosPlanos(this)" style="width:16px;height:16px;accent-color:var(--cyan)"> Todos os planos</label>
           </div>
         </div>
@@ -288,22 +287,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
   <div class="modal">
     <h3 id="modal-titulo">Gerenciar plano</h3>
     <div class="sub" id="modal-sub">Escolha o plano e a duração</div>
-    <div class="plano-options">
-      <div class="plano-opt" id="opt-basico" onclick="selectPlanoOpt('basico')">
-        <div class="plano-opt-nome">Básico</div>
-        <div class="plano-opt-detalhe">50 lanç./mês · R$ 39,90/ano</div>
-      </div>
-      <div class="plano-opt" id="opt-standard" onclick="selectPlanoOpt('standard')">
-        <div class="plano-opt-nome">Standard</div>
-        <div class="plano-opt-detalhe">150 lanç./mês · R$ 69,90/ano</div>
-      </div>
-      <div class="plano-opt" id="opt-premium" onclick="selectPlanoOpt('premium')">
-        <div class="plano-opt-nome">Premium</div>
-        <div class="plano-opt-detalhe">Ilimitado · R$ 119,90/ano</div>
+    <div class="plano-options" style="grid-template-columns:1fr 1fr">
+      <div class="plano-opt selected" id="opt-completo" onclick="selectPlanoOpt('completo')">
+        <div class="plano-opt-nome">Completo</div>
+        <div class="plano-opt-detalhe">Ilimitado · R$ 99,90/ano</div>
       </div>
       <div class="plano-opt remover" id="opt-remover" onclick="selectPlanoOpt('remover')">
         <div class="plano-opt-nome"><i class="ti ti-x" style="font-size:12px"></i> Remover plano</div>
-        <div class="plano-opt-detalhe">Volta para expirado</div>
+        <div class="plano-opt-detalhe">Volta ao modo grátis</div>
       </div>
     </div>
     <div class="dias-field" id="dias-field">
@@ -414,9 +405,9 @@ async function loadUsers(){
 
 function updateStats(){
   document.getElementById('stat-total').textContent=allUsers.length;
-  document.getElementById('stat-trial').textContent=allUsers.filter(u=>u.plano_status==='trial').length;
+  document.getElementById('stat-gratis').textContent=allUsers.filter(u=>u.plano_status==='gratis').length;
   document.getElementById('stat-pagos').textContent=allUsers.filter(u=>u.plano_status==='ativo').length;
-  document.getElementById('stat-exp').textContent=allUsers.filter(u=>u.plano_status==='expirado').length;
+  document.getElementById('stat-legado').textContent=allUsers.filter(u=>u.plano_status==='trial').length;
 }
 
 function filtrar(){
@@ -437,17 +428,18 @@ function renderUsers(users){
   if(!users.length){
     document.getElementById('users-list').innerHTML='<div class="empty"><i class="ti ti-user-off"></i>Nenhum usuário encontrado</div>';return;
   }
-  const planosNome={basico:'Básico',standard:'Standard',premium:'Premium'};
+  const planosNome={completo:'Completo',basico:'Básico',standard:'Standard',premium:'Premium'};
   document.getElementById('users-list').innerHTML=users.map(u=>{
     const ini=(u.name||'?')[0].toUpperCase();
     const ps=u.plano_status;
 
     // Badge de plano/status
     const planoBadge=
+      ps==='gratis'?'<span class="pill pill-gray"><i class="ti ti-gift" style="font-size:10px"></i> Grátis</span>':
       ps==='trial'?'<span class="pill pill-amber"><i class="ti ti-clock" style="font-size:10px"></i> Trial</span>':
       ps==='ativo'?`<span class="pill pill-green"><i class="ti ti-circle-check" style="font-size:10px"></i> ${planosNome[u.plano]||u.plano}</span>`:
       ps==='adm'?'<span class="pill pill-green"><i class="ti ti-shield" style="font-size:10px"></i> ADM</span>':
-      '<span class="pill pill-red"><i class="ti ti-alert-circle" style="font-size:10px"></i> Expirado</span>';
+      '<span class="pill pill-gray"><i class="ti ti-gift" style="font-size:10px"></i> Grátis</span>';
 
     // Badge de 2FA
     const twoFABadge=u.verified
@@ -497,20 +489,22 @@ function renderUsers(users){
 
 // MODAL PLANO
 function openModal(uid,name,planoAtual){
-  modalUserId=uid;planoSelecionado=planoAtual||null;
+  modalUserId=uid;
+  // Só o plano Completo é atribuível; planos legados contam como "completo" na seleção
+  const temPlano=!!planoAtual;
+  planoSelecionado=temPlano?'completo':'completo';
   document.getElementById('modal-titulo').textContent='Plano de '+name;
-  document.getElementById('modal-sub').textContent=planoAtual?`Plano atual: ${planoAtual}`:'Sem plano ativo';
-  ['basico','standard','premium','remover'].forEach(p=>{
-    document.getElementById('opt-'+p).classList.toggle('selected',p===planoAtual||(p==='remover'&&!planoAtual));
-  });
+  document.getElementById('modal-sub').textContent=planoAtual?`Plano atual: ${planoAtual}`:'Sem plano ativo (modo grátis)';
+  document.getElementById('opt-completo').classList.add('selected');
+  document.getElementById('opt-remover').classList.remove('selected');
   document.getElementById('modal-dias').value=365;
-  document.getElementById('dias-field').style.display=planoSelecionado==='remover'?'none':'block';
+  document.getElementById('dias-field').style.display='block';
   document.getElementById('modal-plano').classList.add('open');
 }
 function closeModal(){document.getElementById('modal-plano').classList.remove('open');modalUserId=null;}
 function selectPlanoOpt(p){
   planoSelecionado=p==='remover'?null:p;
-  ['basico','standard','premium','remover'].forEach(x=>{
+  ['completo','remover'].forEach(x=>{
     document.getElementById('opt-'+x).classList.toggle('selected',x===p);
   });
   document.getElementById('dias-field').style.display=p==='remover'?'none':'block';
@@ -637,7 +631,7 @@ async function deleteAdmin(id,name){
 
 // CUPONS
 function toggleTodosPlanos(el){
-  ['basico','standard','premium'].forEach(p=>{
+  ['completo'].forEach(p=>{
     document.getElementById('plano-'+p).checked=!el.checked;
     document.getElementById('plano-'+p).disabled=el.checked;
   });
@@ -653,7 +647,7 @@ async function criarCupom(){
   const todosCheck=document.getElementById('plano-todos').checked;
   let planos=[];
   if(!todosCheck){
-    ['basico','standard','premium'].forEach(p=>{if(document.getElementById('plano-'+p).checked)planos.push(p)});
+    ['completo'].forEach(p=>{if(document.getElementById('plano-'+p).checked)planos.push(p)});
     if(!planos.length){msg.style.display='block';msg.style.color='var(--red)';msg.textContent='Selecione ao menos um plano';return}
   }
   try{
@@ -674,7 +668,7 @@ async function loadCupons(){
   try{
     const cupons=await api('/api/adm/cupons');
     if(!cupons.length){document.getElementById('cupons-list').innerHTML='<div class="empty"><i class="ti ti-ticket"></i>Nenhum cupom</div>';return}
-    const planosNome={basico:'Básico',standard:'Standard',premium:'Premium'};
+    const planosNome={completo:'Completo',basico:'Básico',standard:'Standard',premium:'Premium'};
     document.getElementById('cupons-list').innerHTML=cupons.map(c=>{
       const esgotado=c.usos_max&&c.usos_atual>=c.usos_max;
       const status=esgotado?'esgotado':c.ativo?'ativo':'inativo';
