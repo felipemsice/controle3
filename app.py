@@ -20,21 +20,31 @@ SUPABASE_KEY    = os.environ.get('SUPABASE_KEY', '')
 RESEND_API_KEY  = os.environ.get('RESEND_API_KEY', '')
 EMAIL_FROM      = os.environ.get('EMAIL_FROM', 'noreply@nexapi.com.br')
 
+LIMITE_GRATIS = 12  # lançamentos/mês no modo gratuito
+
+# Plano vigente (novo modelo). Os planos antigos permanecem abaixo apenas para
+# reconhecer assinaturas legadas já contratadas — não são mais oferecidos.
 PLANOS = {
+    'completo': {
+        'nome': 'Completo', 'limite': 999999, 'preco': 99.90,
+        'fotos': True, 'relatorios': True, 'categorias_custom': True,
+        'descricao': 'Lançamentos ilimitados + todos os recursos'
+    },
+    # ── Planos legados (não oferecidos a novos usuários) ──
     'basico': {
         'nome': 'Básico', 'limite': 50, 'preco': 39.90,
         'fotos': False, 'relatorios': False, 'categorias_custom': False,
-        'descricao': 'Até 50 lançamentos/mês'
+        'descricao': 'Até 50 lançamentos/mês', 'legado': True
     },
     'standard': {
         'nome': 'Standard', 'limite': 150, 'preco': 69.90,
         'fotos': True, 'relatorios': True, 'categorias_custom': False,
-        'descricao': 'Até 150 lançamentos/mês'
+        'descricao': 'Até 150 lançamentos/mês', 'legado': True
     },
     'premium': {
         'nome': 'Premium', 'limite': 999999, 'preco': 119.90,
         'fotos': True, 'relatorios': True, 'categorias_custom': True,
-        'descricao': 'Lançamentos ilimitados'
+        'descricao': 'Lançamentos ilimitados', 'legado': True
     },
 }
 
@@ -281,16 +291,17 @@ def get_plano_status(user):
             'categorias_custom': p.get('categorias_custom', False),
         }
 
-    # Trial: acesso limitado a 10 lançamentos/mês
+    # Trial legado: contas antigas ainda em período de teste mantêm o acesso
     trial_end = dt_to_naive(user.get('trial_end'))
     if trial_end and now < trial_end:
         dias = (trial_end - now).days
-        return {'status': 'trial', 'pode_adicionar': True, 'limite': 10,
+        return {'status': 'trial', 'pode_adicionar': True, 'limite': LIMITE_GRATIS,
                 'uso_mes': 0, 'trial_dias': dias,
                 'fotos': True, 'relatorios': True, 'categorias_custom': True}
 
-    return {'status': 'expirado', 'pode_adicionar': False, 'limite': 0, 'uso_mes': 0,
-            'fotos': False, 'relatorios': False, 'categorias_custom': False}
+    # Modo gratuito (novo modelo): grátis até LIMITE_GRATIS lançamentos/mês
+    return {'status': 'gratis', 'pode_adicionar': True, 'limite': LIMITE_GRATIS, 'uso_mes': 0,
+            'fotos': True, 'relatorios': True, 'categorias_custom': True}
 
 def count_mes_atual(user_id):
     sb  = get_sb()
@@ -606,11 +617,15 @@ def conta_status():
     user = res.data[0]
     ps   = get_plano_status(user)
     ps['termos_aceitos'] = bool(user.get('termos_aceite_em'))
-    if ps['status'] == 'ativo':
+    if ps.get('limite', 0) < 999999 and ps['status'] != 'adm':
         uso = count_mes_atual(g.user_id)
         ps['uso_mes'] = uso
         ps['pode_adicionar'] = uso < ps['limite']
-    ps['planos_disponiveis'] = {k: {'nome': v['nome'], 'limite': v['limite'], 'preco': v['preco']} for k,v in PLANOS.items()}
+    # Só o plano vigente é oferecido (planos legados ficam ocultos)
+    ps['planos_disponiveis'] = {
+        k: {'nome': v['nome'], 'limite': v['limite'], 'preco': v['preco'], 'descricao': v.get('descricao','')}
+        for k, v in PLANOS.items() if not v.get('legado')
+    }
     return jsonify(ps)
 
 # ── CATEGORIAS ───────────────────────────────────────────
@@ -685,11 +700,11 @@ def add_despesa():
     ps   = get_plano_status(user)
     if not ps['pode_adicionar']:
         return jsonify({'error': 'plano_expirado', 'status': ps['status']}), 403
-    # Verificar limite para plano ativo E trial (premium é ilimitado)
-    if ps['status'] in ('ativo', 'trial') and ps.get('limite', 0) < 999999:
+    # Verificar limite mensal (planos ilimitados: limite >= 999999)
+    if ps.get('limite', 0) < 999999 and ps['status'] != 'adm':
         uso = count_mes_atual(g.user_id)
         if uso >= ps['limite']:
-            return jsonify({'error': 'limite_atingido', 'uso': uso, 'limite': ps['limite']}), 403
+            return jsonify({'error': 'limite_atingido', 'uso': uso, 'limite': ps['limite'], 'status': ps['status']}), 403
     d   = request.get_json()
     obs = (d.get('obs') or '').strip()[:300]
     ins = sb.table('despesas').insert({
@@ -1232,6 +1247,10 @@ def criar_pagamento():
     pref_data = {
         'items': [{'title': title, 'quantity': 1, 'currency_id': 'BRL', 'unit_price': preco_final}],
         'payer': {'name': user['name']},
+        'payment_methods': {
+            'excluded_payment_types': [{'id': 'ticket'}, {'id': 'atm'}],
+            'installments': 12,
+        },
         'back_urls': {
             'success': f"{APP_URL}/assinar?status=sucesso&plano={plano}&cupom={cupom_code}",
             'failure': f"{APP_URL}/assinar?status=erro",
